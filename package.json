@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node start.js > /dev/null & echo $! > .pid",
-    "stop": "kill `< .pid`"
+    "stop": "kill `< .pid`",
+    "test": "export NODE_TEST=1 ; tap --tap test/*.js"
   },
   "repository": {
     "type": "git",
@@ -17,10 +18,24 @@
     "http",
     "server"
   ],
-  "author": "Michael Nisi",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/michaelnisi/manger-http/issues"
   },
-  "homepage": "https://github.com/michaelnisi/manger-http"
+  "homepage": "https://github.com/michaelnisi/manger-http",
+  "directories": {
+    "test": "test"
+  },
+  "dependencies": {
+    "bunyan": "^1.0.1",
+    "leveldown": "^0.10.2",
+    "levelup": "^0.18.6",
+    "manger": "^1.0.0",
+    "mkdirp": "^0.5.0",
+    "routes": "^1.2.0"
+  },
+  "devDependencies": {
+    "tap": "^0.4.12"
+  },
+  "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)"
 }

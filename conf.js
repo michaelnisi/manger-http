@@ -1,13 +1,19 @@
 
-// config - configure troubled-www
+// config - configure manger-http
 
-var path = require('path')
-  , fs = require('fs')
-  , assert = require('assert')
-  ;
+var bunyan = require('bunyan')
 
-exports.port = process.env.NODE_ENV === 'production' ? 80 : 8080
-exports.db = process.env.MANGER_DB || '/tmp/mangerdb'
+function log() {
+  return bunyan.createLogger({
+    name: 'manger-http'
+  , level: 'info'
+  , serializers: bunyan.stdSerializers
+  })
+}
+
+exports.log = log()
+exports.location = process.env.LEVEL_DB_LOCATION
+exports.port = process.env.PORT
 
 if (module === require.main) {
   console.log(exports)
