@@ -1,12 +1,15 @@
 {
   "name": "manger-http",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "description": "HTTP API for manger",
   "main": "index.js",
   "scripts": {
     "start": "node start.js > /dev/null & echo $! > .pid",
     "stop": "kill `< .pid`",
-    "test": "export NODE_TEST=1 ; tap --tap test/*.js"
+    "debug": "NODE_DEBUG=1 node start.js | bunyan -o short",
+    "test": "NODE_TEST=1 tap -b test/*.js",
+    "posttest": "rm -rf /tmp/manger-http-[1-9]*",
+    "todo": "grep -HnR --color=auto TODO index.js"
   },
   "repository": {
     "type": "git",
@@ -28,14 +31,18 @@
   },
   "dependencies": {
     "bunyan": "^1.0.1",
-    "leveldown": "^0.10.2",
-    "levelup": "^0.18.6",
-    "manger": "^1.0.0",
+    "http-hash-router": "^1.1.0",
+    "manger": "^2.0.0",
     "mkdirp": "^0.5.0",
-    "routes": "^1.2.0"
+    "negotiator": "^0.5.3",
+    "readable-stream": "^1.1.13"
   },
   "devDependencies": {
-    "tap": "^0.4.12"
+    "rimraf": "^2.4.1",
+    "tap": "^1.1.4"
+  },
+  "engines": {
+    "node": ">=0.10"
   },
   "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)"
 }

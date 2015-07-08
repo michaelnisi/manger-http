@@ -1,4 +1,3 @@
-
 // start - start manger-http service
 
-require("./")(require("./conf")).start()
+require('./')(require('./conf')).start()
