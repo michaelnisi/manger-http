@@ -4,6 +4,7 @@ var bunyan = require('bunyan')
 var http = require('http')
 
 function log () {
+  if (parseInt(process.env.NODE_SILENT, 10) === 1) return
   var isDebug = parseInt(process.env.NODE_DEBUG, 10) === 1
   return bunyan.createLogger({
     name: 'manger',

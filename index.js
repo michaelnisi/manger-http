@@ -15,20 +15,20 @@ var repl = require('repl')
 var util = require('util')
 var zlib = require('zlib')
 
-// TODO: Copy all errors
-
 function nop () {}
 
+var debugging = parseInt(process.env.NODE_DEBUG, 10) === 1
 var debug = (function () {
-  return parseInt(process.env.NODE_DEBUG, 10) === 1 ?
-    function (o) {
-      console.error('** manger-http: %s', util.inspect(o))
-    } : nop
+  return debugging ? function (o) {
+    console.error('** manger-http: %s', util.inspect(o))
+  } : nop
 })()
-
-function time (t) {
-  return t[0] * 1e9 + t[1]
-}
+var time = debugging ? process.hrtime : nop
+var ns = (function () {
+  return debugging ? function (t) {
+    return t[0] * 1e9 + t[1]
+  } : nop
+})()
 
 function headers (len, lat, enc) {
   var headers = {
@@ -52,7 +52,6 @@ function getGz (req) {
   return gz
 }
 
-// TODO: Replace with map (er.message in whitelist)
 var whitelist = RegExp([
   'client error',
   'invalid query',
@@ -114,7 +113,7 @@ function ok (er) {
 }
 
 function query (s, req, opts, cb) {
-  var t = process.hrtime()
+  var t = time()
   var queries = manger.queries()
   var buf = ''
   var onend = done
@@ -151,6 +150,7 @@ function query (s, req, opts, cb) {
   queries.pipe(s)
 }
 
+// API: /POST /feeds
 function feeds (req, res, opts, cb) {
   var s = req.manger.feeds()
   query(s, req, opts, cb)
@@ -161,8 +161,9 @@ function urlFromParams (params) {
   return typeof str === 'string' ? unescape(str) : null
 }
 
+// API: /GET /feed/:uri
 function single (s, req, res, opts, cb) {
-  var t = process.hrtime()
+  var t = time()
   var params = opts.params
   var uri = urlFromParams(params)
   var q = manger.query(uri)
@@ -188,14 +189,15 @@ function feed (req, res, opts, cb) {
   single(s, req, res, opts, cb)
 }
 
+// API: /GET /entries/:uri
 function entriesOfFeed (req, res, opts, cb) {
   var s = req.manger.entries()
   single(s, req, res, opts, cb)
 }
 
+// API: /DELETE /feed/:uri
 function deleteFeed (req, res, opts, cb) {
-  // TODO: Time only in DEBUG mode
-  var t = process.hrtime()
+  var t = time()
   var params = opts.params
   var uri = urlFromParams(params)
   var cache = req.manger
@@ -227,7 +229,7 @@ function deleteFeed (req, res, opts, cb) {
   })
 }
 
-// API: /POST entries
+// API: /POST /entries
 function entries (req, res, opts, cb) {
   var s = req.manger.entries()
   query(s, req, opts, cb)
@@ -241,41 +243,43 @@ function plural (n) {
   return n > 1 || n === 0 ? 's' : ''
 }
 
-// API: /GET update
+var OK = JSON.stringify({
+  ok: true
+})
+
+// API: /PUT /feeds
 function update (req, res, opts, cb) {
   var log = req.log
   var cache = req.manger
   cache.flushCounter(function (er, feedCount) {
-    var s
     function onerror (er) {
-      if (s) s.removeAllListeners()
+      var failure = 'not updated'
+      var reason = er.message
+      var error = new Error([failure, reason].join([': ']))
       var payload = JSON.stringify({
-        error: 'not updated',
-        reason: 'failed to flush counter'
+        error: failure,
+        reason: reason
       })
-      cb(er, 500, payload)
+      cb(error, 500, payload)
     }
     if (er) {
       return onerror(er)
     }
-    var payload = JSON.stringify({
-      ok: true
-    })
-    cb(null, 202, payload)
+    cb(null, 202, OK)
     var x = factor(feedCount)
-    s = cache.update(x)
-    var t = process.hrtime()
+    var s = cache.update(x)
+    var t = time()
     var count = 0
     function ondata (chunk) {
       count++
     }
     function onend () {
       s.removeAllListeners()
-      var lat = time(process.hrtime(t))
-      var ms = (lat / 1e6).toFixed(2) + ' ms'
+      var lat = ns(time(t))
+      var secs = (lat / 1e9).toFixed(2) + ' s'
       log.info(count + ' feed' + plural(count) +
         ' updated with ' + x + ' stream' +
-        plural(x) + ' in ' + ms)
+        plural(x) + ' in ' + secs)
     }
     s.on('data', ondata)
     s.on('error', onerror)
@@ -284,8 +288,9 @@ function update (req, res, opts, cb) {
 }
 
 function latency (t, log) {
-  var lat = time(process.hrtime(t))
-  if (lat > 40e6) {
+  var lat = ns(time(t))
+  var limit = 21e6
+  if (lat > limit) {
     log.warn('high latency: ' + (lat / 1e6).toFixed(2) + ' ms')
   }
   return lat
@@ -293,7 +298,7 @@ function latency (t, log) {
 
 function urls (readable, opts, cb) {
   var sc = 200
-  var t = process.hrtime()
+  var t = time()
   var urls = []
   function done (er) {
     readable.removeAllListeners()
@@ -321,11 +326,13 @@ function urls (readable, opts, cb) {
   readable.on('end', onend)
 }
 
+// API: /GET /feeds
 function list (req, res, opts, cb) {
   var s = req.manger.list()
   urls(s, opts, cb)
 }
 
+// API: /* /
 function root (req, res, opts, cb) {
   var payload = JSON.stringify({
     name: 'manger',
@@ -339,11 +346,9 @@ function ranks (req, res, opts, cb) {
   urls(s, opts, cb)
 }
 
+// API: /DELETE /ranks
 function resetRanks (req, res, opts, cb) {
-  var payload = JSON.stringify({
-    ok: true
-  })
-  cb(null, 202, payload)
+  cb(null, 202, OK)
   var cache = req.manger
   cache.resetRanks(function (er) {
     if (er) {
@@ -353,11 +358,9 @@ function resetRanks (req, res, opts, cb) {
   })
 }
 
+// API: /PUT /ranks
 function flushCounter (req, res, opts, cb) {
-  var payload = JSON.stringify({
-    ok: true
-  })
-  cb(null, 202, payload)
+  cb(null, 202, OK)
   var cache = req.manger
   cache.flushCounter(function (er, count) {
     if (er) req.log.warn(er)
@@ -414,29 +417,33 @@ function MangerService (opts) {
   mkdirp.sync(this.location)
   this.version = version()
   this.router = router()
+
+  this.connections = 0
 }
 
 MangerService.prototype.handle = function (req, res) {
-  this.log.info('/' + req.method + ' ' + req.url)
+  var log = this.log
+
+  log.info('/' + req.method + ' ' + req.url)
+
   req.log = this.log
-  req.version = this.version
   req.manger = this.manger
-  req.handle = this.handle
+  req.version = this.version
 
   function terminate (er, statusCode, payload, time) {
     if (er) {
       if (er.type === 'http-hash-router.not-found') {
         var reason = req.url + ' is not an endpoint'
-        req.log.warn(reason)
+        log.warn(reason)
         statusCode = 404
         payload = JSON.stringify({
           error: 'not found',
           reason: reason
         })
       } else if (er.message.match(whitelist)) {
-        req.log.warn(er.message)
+        log.warn(er.message)
       } else {
-        req.log.error(er)
+        log.error(er)
         throw er
       }
     }
@@ -445,8 +452,9 @@ MangerService.prototype.handle = function (req, res) {
   this.router(req, res, {}, terminate)
 }
 
-// TODO: Review starting and stopping
 MangerService.prototype.start = function (cb) {
+  cb = cb || nop
+
   this.log.info('starting pid %s on port %s', process.pid, this.port)
   this.log.info('using database at %s', this.location)
   this.log.info('with cache size %s MB', this.cacheSize / 1024 / 1024)
@@ -459,9 +467,7 @@ MangerService.prototype.start = function (cb) {
   this.server = this.server || http.createServer(function (req, res) {
     me.handle(req, res)
   })
-  this.server.once('listening', function () {
-    if (cb) cb()
-  })
+  this.server.once('listening', cb)
   this.server.listen(this.port)
 }
 

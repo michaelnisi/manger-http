@@ -32,7 +32,7 @@
   "dependencies": {
     "bunyan": "^1.0.1",
     "http-hash-router": "^1.1.0",
-    "manger": "^2.0.0",
+    "manger": "^2.0.4",
     "mkdirp": "^0.5.0",
     "negotiator": "^0.5.3",
     "readable-stream": "^1.1.13"
