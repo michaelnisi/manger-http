@@ -2,6 +2,7 @@
 
 module.exports = exports = MangerService
 
+var assert = require('assert')
 var HttpHashRouter = require('http-hash-router')
 var Negotiator = require('negotiator')
 var StringDecoder = require('string_decoder').StringDecoder
@@ -9,9 +10,7 @@ var fs = require('fs')
 var http = require('http')
 var manger = require('manger')
 var mkdirp = require('mkdirp')
-var net = require('net')
 var path = require('path')
-var repl = require('repl')
 var util = require('util')
 var zlib = require('zlib')
 
@@ -52,40 +51,33 @@ function getGz (req) {
   return gz
 }
 
-var whitelist = RegExp([
-  'client error',
-  'invalid query',
-  'not deleted',
-  'parse error',
-  'quaint HTTP status',
-  'query error',
-  'request error'
-].join('|'))
-
 // A general responder for bufferd payloads that applies gzip compression
 // if requested.
 //
-// - req IncommingMessage The request
+// - req IncomingMessage The request
 // - res ServerResponse The response
 // - statusCode Number The HTTP status code
 // - payload Buffer | String The JSON payload
 // - time Array | void The hi-res real time tuple of when the request hit
-function respond (req, res, statusCode, payload, time) {
-  var log = req.log
-  if (res.finished) {
-    log.warn('internal error: multiple responses')
-    return
-  }
+// - otps ReqOpts The options objects
+function respond (req, res, statusCode, payload, time, opts) {
+  assert(!res.finished, 'attempted to respond more than once')
   function onfinish () {
-    res.removeAllListeners()
+    res.removeListener('close', onclose)
+    res.removeListener('finish', onfinish)
+    res = null
+    req = null
+    opts = null
   }
   function onclose () {
-    log.warn('connection terminated: ' + req.url)
+    opts.log.warn('connection terminated: ' + req.url)
     onfinish()
   }
   var gz = getGz(req)
   function lat () {
-    if (time instanceof Array) return latency(time, log)
+    if (time instanceof Array) {
+      return latency(time, opts.log)
+    }
   }
   if (gz) {
     zlib.gzip(payload, function (er, zipped) {
@@ -105,6 +97,15 @@ function respond (req, res, statusCode, payload, time) {
 
 function ok (er) {
   var ok = false
+  var whitelist = RegExp([
+    'client error',
+    'invalid query',
+    'not deleted',
+    'parse error',
+    'quaint HTTP status',
+    'query error',
+    'request error'
+  ].join('|'))
   if (er) {
     var msg = er.message
     if (msg) ok = msg.match(whitelist) !== null
@@ -116,21 +117,28 @@ function query (s, req, opts, cb) {
   var t = time()
   var queries = manger.queries()
   var buf = ''
-  var onend = done
-  function done (er) {
-    [s, queries, req].forEach(function (s) {
-      s.removeAllListeners()
-    })
+  function onend (er) {
+    if (!queries) return
+
+    s.removeListener('data', ondata)
+    s.removeListener('end', onend)
+    s.removeListener('error', onerror)
+    queries.removeListener('error', onerror)
+    req.removeListener('close', onclose)
+    req.unpipe(queries)
+    queries.unpipe(s)
+    queries = null
+
     var sc = er ? er.statusCode || 404 : 200
     cb(er, sc, buf, t)
-    onend = nop
+    buf = null
   }
   function onerror (er) {
     var error = new Error(er.message)
     if (!ok(er)) {
       onend(error)
     } else {
-      req.log.warn(error)
+      opts.log.warn(error)
     }
   }
   function onclose () {
@@ -152,7 +160,7 @@ function query (s, req, opts, cb) {
 
 // API: /POST /feeds
 function feeds (req, res, opts, cb) {
-  var s = req.manger.feeds()
+  var s = opts.manger.feeds()
   query(s, req, opts, cb)
 }
 
@@ -164,10 +172,6 @@ function urlFromParams (params) {
 // API: /GET /feed/:uri
 function single (s, req, res, opts, cb) {
   var t = time()
-  var params = opts.params
-  var uri = urlFromParams(params)
-  var q = manger.query(uri)
-  s.end(q)
   var buf = ''
   s.on('readable', function () {
     var chunk
@@ -175,23 +179,31 @@ function single (s, req, res, opts, cb) {
       buf += chunk
     }
   })
-  function onfinish (er) {
-    s.removeAllListeners()
+  function onend (er) {
+    if (!buf) return
+    s.removeListener('onend', onend)
+    s.removeListener('error', onend)
     var sc = er ? er.statusCode || 404 : 200
     cb(er, sc, buf, t)
+    buf = null
   }
-  s.on('finish', onfinish)
-  s.on('error', onfinish)
+  s.on('finish', onend)
+  s.on('error', onend)
+
+  var params = opts.params
+  var uri = urlFromParams(params)
+  var q = manger.query(uri)
+  s.end(q)
 }
 
 function feed (req, res, opts, cb) {
-  var s = req.manger.feeds()
+  var s = opts.manger.feeds()
   single(s, req, res, opts, cb)
 }
 
 // API: /GET /entries/:uri
 function entriesOfFeed (req, res, opts, cb) {
-  var s = req.manger.entries()
+  var s = opts.manger.entries()
   single(s, req, res, opts, cb)
 }
 
@@ -200,7 +212,7 @@ function deleteFeed (req, res, opts, cb) {
   var t = time()
   var params = opts.params
   var uri = urlFromParams(params)
-  var cache = req.manger
+  var cache = opts.manger
   cache.remove(uri, function handler (er) {
     var sc = 200
     var buf
@@ -231,7 +243,7 @@ function deleteFeed (req, res, opts, cb) {
 
 // API: /POST /entries
 function entries (req, res, opts, cb) {
-  var s = req.manger.entries()
+  var s = opts.manger.entries()
   query(s, req, opts, cb)
 }
 
@@ -247,12 +259,9 @@ var OK = JSON.stringify({
   ok: true
 })
 
-// API: /PUT /feeds
 function update (req, res, opts, cb) {
-  var log = req.log
-  var cache = req.manger
-  cache.flushCounter(function (er, feedCount) {
-    function onerror (er) {
+  opts.manger.flushCounter(function (er, feedCount) {
+    if (er) {
       var failure = 'not updated'
       var reason = er.message
       var error = new Error([failure, reason].join([': ']))
@@ -261,25 +270,44 @@ function update (req, res, opts, cb) {
         reason: reason
       })
       cb(error, 500, payload)
-    }
-    if (er) {
-      return onerror(er)
+      cb = null
+      opts = null
+      return
     }
     cb(null, 202, OK)
+    cb = null
     var x = factor(feedCount)
-    var s = cache.update(x)
+    x = 3
+    var s = opts.manger.update(x)
     var t = time()
     var count = 0
     function ondata (chunk) {
       count++
     }
+    function onerror (er) {
+      if (ok(er)) {
+        opts.log.warn(er.message)
+      } else {
+        var failure = 'update error'
+        var reason = er.message
+        var error = new Error([failure, reason].join([': ']))
+        opts.log.error(error)
+        throw error
+      }
+    }
     function onend () {
-      s.removeAllListeners()
-      var lat = ns(time(t))
-      var secs = (lat / 1e9).toFixed(2) + ' s'
-      log.info(count + ' feed' + plural(count) +
-        ' updated with ' + x + ' stream' +
-        plural(x) + ' in ' + secs)
+      if (!s) return
+      s.removeListener('data', ondata)
+      s.removeListener('error', onerror)
+      s.removeListener('end', onend)
+      s = null
+      var lat
+      if (t) lat = ns(time(t))
+      var secs = lat ? ' in ' + (lat / 1e9).toFixed(2) + ' s' : ''
+      opts.log.info(count + ' feed' + plural(count) +
+        ' updated with ' + x + ' stream' + plural(x) + secs)
+      req = null
+      opts = null
     }
     s.on('data', ondata)
     s.on('error', onerror)
@@ -297,16 +325,19 @@ function latency (t, log) {
 }
 
 function urls (readable, opts, cb) {
+  assert(cb, 'callback required')
   var sc = 200
   var t = time()
   var urls = []
-  function done (er) {
-    readable.removeAllListeners()
+  function onend (er) {
+    if (!urls) return
+    readable.removeListener('data', ondata)
+    readable.removeListener('error', onerror)
+    readable.removeListener('end', onend)
     var payload = JSON.stringify(urls)
+    urls = null
     cb(null, sc, payload, t)
-    onend = nop
   }
-  var onend = done
   function onerror (er) {
     onend(er)
   }
@@ -316,6 +347,7 @@ function urls (readable, opts, cb) {
     return decoder.write(chunk)
   }
   function ondata (chunk) {
+    if (!urls) return
     if (chunk instanceof Buffer) {
       chunk = decode(chunk)
     }
@@ -328,7 +360,7 @@ function urls (readable, opts, cb) {
 
 // API: /GET /feeds
 function list (req, res, opts, cb) {
-  var s = req.manger.list()
+  var s = opts.manger.list()
   urls(s, opts, cb)
 }
 
@@ -336,24 +368,24 @@ function list (req, res, opts, cb) {
 function root (req, res, opts, cb) {
   var payload = JSON.stringify({
     name: 'manger',
-    version: req.version
+    version: opts.version
   })
   cb(null, 400, payload)
 }
 
 function ranks (req, res, opts, cb) {
-  var s = req.manger.ranks()
+  var s = opts.manger.ranks()
   urls(s, opts, cb)
 }
 
 // API: /DELETE /ranks
 function resetRanks (req, res, opts, cb) {
   cb(null, 202, OK)
-  var cache = req.manger
+  var cache = opts.manger
   cache.resetRanks(function (er) {
     if (er) {
       var error = new Error('could not reset ranks: ' + er.message)
-      req.log.warn(error)
+      opts.log.warn(error)
     }
   })
 }
@@ -361,9 +393,9 @@ function resetRanks (req, res, opts, cb) {
 // API: /PUT /ranks
 function flushCounter (req, res, opts, cb) {
   cb(null, 202, OK)
-  var cache = req.manger
+  var cache = opts.manger
   cache.flushCounter(function (er, count) {
-    if (er) req.log.warn(er)
+    if (er) opts.log.warn(er)
   })
 }
 
@@ -421,35 +453,10 @@ function MangerService (opts) {
   this.connections = 0
 }
 
-MangerService.prototype.handle = function (req, res) {
-  var log = this.log
-
-  log.info('/' + req.method + ' ' + req.url)
-
-  req.log = this.log
-  req.manger = this.manger
-  req.version = this.version
-
-  function terminate (er, statusCode, payload, time) {
-    if (er) {
-      if (er.type === 'http-hash-router.not-found') {
-        var reason = req.url + ' is not an endpoint'
-        log.warn(reason)
-        statusCode = 404
-        payload = JSON.stringify({
-          error: 'not found',
-          reason: reason
-        })
-      } else if (er.message.match(whitelist)) {
-        log.warn(er.message)
-      } else {
-        log.error(er)
-        throw er
-      }
-    }
-    respond(req, res, statusCode, payload, time)
-  }
-  this.router(req, res, {}, terminate)
+function ReqOpts (log, manger, version) {
+  this.log = log
+  this.manger = manger
+  this.version = version
 }
 
 MangerService.prototype.start = function (cb) {
@@ -460,47 +467,47 @@ MangerService.prototype.start = function (cb) {
   this.log.info('with cache size %s MB', this.cacheSize / 1024 / 1024)
   this.log.info('maximal %s sockets', http.globalAgent.maxSockets)
 
-  this.manger = this.manger || manger(this.location, {
+  this.manger = manger(this.location, {
     cacheSize: this.cacheSize
   })
-  var me = this
-  this.server = this.server || http.createServer(function (req, res) {
-    me.handle(req, res)
-  })
-  this.server.once('listening', cb)
-  this.server.listen(this.port)
-}
 
-// TODO: Integrate REPL
-MangerService.prototype.startREPL = function () {
-  var me = this
-  function listener (sock) {
-    var opts = {
-      prompt: 'manger> ',
-      input: sock,
-      output: sock
+  var router = this.router
+  var opts = new ReqOpts(this.log, this.manger, this.version)
+
+  function onrequest (req, res) {
+    opts.log.info('/' + req.method + ' ' + req.url)
+
+    function terminate (er, statusCode, payload, time) {
+      if (er) {
+        if (er.type === 'http-hash-router.not-found') {
+          var reason = req.url + ' is not an endpoint'
+          opts.log.warn(reason)
+          statusCode = 404
+          payload = JSON.stringify({
+            error: 'not found',
+            reason: reason
+          })
+        } else if (ok(er)) {
+          opts.log.warn(er.message)
+        } else {
+          opts.log.error(er)
+          throw er
+        }
+      }
+      respond(req, res, statusCode, payload, time, opts)
+
+      req = null
+      res = null
     }
-    var r = repl.start(opts)
-    r.context.svc = me
-    r.on('exit', function () {
-      sock.end()
-    })
+    router(req, res, opts, terminate)
   }
-  var name = '/tmp/manger-repl.sock'
-  var server = net.createServer(listener)
-  function onerror (er) {
-    if (er.code === 'EADDRINUSE') {
-      fs.unlink(name, function (er) {
-        server.listen(name)
-      })
-    }
-  }
-  server.on('error', onerror)
-  server.listen(name)
+  var server = http.createServer(onrequest)
+  server.once('listening', cb)
+  server.listen(this.port)
+  this.server = server
 }
 
 MangerService.prototype.stop = function (cb) {
-  cb = cb || nop
   var db = this.db
   this.server.close(function (er) {
     if (db) {

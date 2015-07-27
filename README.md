@@ -19,7 +19,7 @@ Date: Sat, 04 Jul 2015 14:08:40 GMT
 Connection: keep-alive
 ```
 
-All endpoints return JSON and may apply gzip encoding.
+All endpoints return JSON and optionally provide gzip encoding.
 
 ### Types
 
