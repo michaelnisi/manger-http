@@ -459,6 +459,20 @@ function ReqOpts (log, manger, version) {
   this.version = version
 }
 
+function errorHandler (er) {
+  if (ok(er)) {
+    this.log.warn(er.message)
+  } else {
+    var failure = 'fatal error'
+    var reason = er.message
+    var error = new Error([failure, reason].join([': ']))
+    this.log.error(error)
+    process.nextTick(function () {
+      throw error
+    })
+  }
+}
+
 MangerService.prototype.start = function (cb) {
   cb = cb || nop
 
@@ -467,9 +481,12 @@ MangerService.prototype.start = function (cb) {
   this.log.info('with cache size %s MB', this.cacheSize / 1024 / 1024)
   this.log.info('maximal %s sockets', http.globalAgent.maxSockets)
 
-  this.manger = manger(this.location, {
+  var core = manger(this.location, {
     cacheSize: this.cacheSize
   })
+  this.errorHandler = errorHandler.bind(this)
+  core.on('error', this.errorHandler)
+  this.manger = core
 
   var router = this.router
   var opts = new ReqOpts(this.log, this.manger, this.version)
@@ -508,6 +525,7 @@ MangerService.prototype.start = function (cb) {
 }
 
 MangerService.prototype.stop = function (cb) {
+  this.manger.removeListener('error', this.errorHandler)
   var db = this.db
   this.server.close(function (er) {
     if (db) {
