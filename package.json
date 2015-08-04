@@ -9,7 +9,7 @@
     "debug": "NODE_DEBUG=1 node start.js | bunyan -o short",
     "test": "NODE_TEST=1 tap -b test/*.js",
     "posttest": "rm -rf /tmp/manger-http-[1-9]*",
-    "todo": "grep -HnR --color=auto TODO index.js"
+    "todo": "grep -HnR TODO index.js boot test"
   },
   "repository": {
     "type": "git",
@@ -38,6 +38,7 @@
     "readable-stream": "^1.1.13"
   },
   "devDependencies": {
+    "nock": "^2.9.1",
     "rimraf": "^2.4.1",
     "tap": "^1.1.4"
   },

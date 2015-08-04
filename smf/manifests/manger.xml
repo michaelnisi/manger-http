@@ -1,0 +1,70 @@
+<?xml version="1.0"?>
+<!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
+
+<service_bundle type='manifest' name='PODpodest:manger'>
+
+  <service
+    name='network/manger'
+    type='service'
+    version='1'>
+
+    <create_default_instance enabled='true' />
+
+    <single_instance />
+
+    <dependency
+      name="network"
+      grouping="require_all"
+      restart_on="error"
+      type="service">
+      <service_fmri value="svc:/network/physical" />
+    </dependency>
+
+    <dependency
+      name="filesystem"
+      grouping="require_all"
+      restart_on="error"
+      type="service">
+      <service_fmri value="svc:/system/filesystem/local" />
+    </dependency>
+
+    <exec_method
+      type='method'
+      name='start'
+      exec='node --abort-on-uncaught-exception start.js &amp;'
+      timeout_seconds='30'>
+      <method_context working_directory="/opt/podest/manger">
+        <method_credential
+          user='root'
+          group='root'
+          privileges='basic,net_privaddr' />
+        <method_environment>
+          <envvar name="PATH"
+            value="/opt/local/bin:/usr/bin:/usr/sbin:/bin"/>
+          <envvar name="PORT"
+            value="80"/>
+          <envvar name="NODE_LOG_LEVEL"
+            value="40" />
+          <envvar name="LEVEL_DB_LOCATION"
+            value="/var/db/manger" />
+          <envvar name="LEVEL_DB_CACHE_SIZE"
+            value="16" />
+        </method_environment>
+      </method_context>
+    </exec_method>
+
+    <exec_method
+      type="method"
+      name="stop"
+      exec=":kill"
+      timeout_seconds="30" />
+
+    <template>
+      <common_name>
+        <loctext xml:lang="Node">Feed Cache Service</loctext>
+      </common_name>
+    </template>
+
+  </service>
+
+</service_bundle>

@@ -1,16 +1,18 @@
 // manger-http - provide HTTP interface for manger
-
+//
 module.exports = exports = MangerService
 
-var assert = require('assert')
 var HttpHashRouter = require('http-hash-router')
 var Negotiator = require('negotiator')
 var StringDecoder = require('string_decoder').StringDecoder
+var assert = require('assert')
 var fs = require('fs')
 var http = require('http')
 var manger = require('manger')
 var mkdirp = require('mkdirp')
+var net = require('net')
 var path = require('path')
+var repl = require('repl')
 var util = require('util')
 var zlib = require('zlib')
 
@@ -260,6 +262,7 @@ var OK = JSON.stringify({
 })
 
 function update (req, res, opts, cb) {
+  // TODO: Warn in case of overlapping updates
   opts.manger.flushCounter(function (er, feedCount) {
     if (er) {
       var failure = 'not updated'
@@ -370,7 +373,7 @@ function root (req, res, opts, cb) {
     name: 'manger',
     version: opts.version
   })
-  cb(null, 400, payload)
+  cb(null, 200, payload)
 }
 
 function ranks (req, res, opts, cb) {
@@ -397,16 +400,6 @@ function flushCounter (req, res, opts, cb) {
   cache.flushCounter(function (er, count) {
     if (er) opts.log.warn(er)
   })
-}
-
-function defaults (opts) {
-  opts = opts || Object.create(null)
-  opts.location = opts.location || '/tmp/manger-http'
-  opts.port = opts.port || 8384
-  opts.log = opts.log || { info: nop, warn: nop, debug: nop, error: nop }
-  opts.ttl = opts.ttl || 24 * 36e5
-  opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
-  return opts
 }
 
 function router () {
@@ -442,20 +435,37 @@ function version () {
   return pkg.version
 }
 
+function defaults (opts) {
+  opts = opts || Object.create(null)
+  opts.location = opts.location || '/tmp/manger-http'
+  opts.port = opts.port || 8384
+  opts.log = opts.log || { info: nop, warn: nop, debug: nop, error: nop }
+  opts.ttl = opts.ttl || 24 * 36e5
+  opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
+  return opts
+}
+
 function MangerService (opts) {
   opts = defaults(opts)
   if (!(this instanceof MangerService)) return new MangerService(opts)
-  util._extend(this, opts)
-  mkdirp.sync(this.location)
-  this.version = version()
-  this.router = router()
 
-  this.connections = 0
+  util._extend(this, opts)
+
+  this.router = router()
+  this.version = version()
+
+  this.manger = null
+  this.repl = null
+  this.server = null
+
+  mkdirp.sync(this.location)
 }
 
-function ReqOpts (log, manger, version) {
+// TODO: Name this ReqContext
+function ReqOpts (log, manger, updating, version) {
   this.log = log
   this.manger = manger
+  this.updating = typeof updating === 'boolean' ? updating : false
   this.version = version
 }
 
@@ -473,69 +483,131 @@ function errorHandler (er) {
   }
 }
 
+MangerService.prototype.startREPL = function (addr, cb) {
+  var me = this
+  function listener (sock) {
+    var opts = {
+      prompt: 'manger> ',
+      input: sock,
+      output: sock
+    }
+    var r = repl.start(opts)
+    r.context.svc = me
+    r.on('exit', function () {
+      sock.end()
+    })
+  }
+  var server = net.createServer(listener)
+  function onerror (er) {
+    if (er.code === 'EADDRINUSE') {
+      fs.unlink(addr, function (er) {
+        server.listen(addr)
+      })
+    }
+  }
+  server.on('error', onerror)
+  server.listen(addr, function (er) {
+    cb(er, server)
+  })
+}
+
 MangerService.prototype.start = function (cb) {
   cb = cb || nop
 
-  this.log.info('starting pid %s on port %s', process.pid, this.port)
+  this.log.info('starting pid %s', process.pid)
   this.log.info('using database at %s', this.location)
   this.log.info('with cache size %s MB', this.cacheSize / 1024 / 1024)
-  this.log.info('maximal %s sockets', http.globalAgent.maxSockets)
 
-  var core = manger(this.location, {
+  var cache = manger(this.location, {
     cacheSize: this.cacheSize
   })
   this.errorHandler = errorHandler.bind(this)
-  core.on('error', this.errorHandler)
-  this.manger = core
+  cache.on('error', this.errorHandler)
+  this.manger = cache
 
   var router = this.router
-  var opts = new ReqOpts(this.log, this.manger, this.version)
+  var ctx = new ReqOpts(this.log, this.manger, false, this.version)
 
   function onrequest (req, res) {
-    opts.log.info('/' + req.method + ' ' + req.url)
+    ctx.log.info('/' + req.method + ' ' + req.url)
 
     function terminate (er, statusCode, payload, time) {
       if (er) {
         if (er.type === 'http-hash-router.not-found') {
           var reason = req.url + ' is not an endpoint'
-          opts.log.warn(reason)
+          ctx.log.warn(reason)
           statusCode = 404
           payload = JSON.stringify({
             error: 'not found',
             reason: reason
           })
         } else if (ok(er)) {
-          opts.log.warn(er.message)
+          ctx.log.warn(er.message)
         } else {
-          opts.log.error(er)
+          ctx.log.error(er)
           throw er
         }
       }
-      respond(req, res, statusCode, payload, time, opts)
+      respond(req, res, statusCode, payload, time, ctx)
 
       req = null
       res = null
     }
-    router(req, res, opts, terminate)
+    router(req, res, ctx, terminate)
   }
+  var me = this
+
   var server = http.createServer(onrequest)
-  server.once('listening', cb)
-  server.listen(this.port)
+  server.listen(this.port, function (er) {
+    me.log.info('listening on port %s', me.port)
+    me.log.info('allowing %s sockets', http.globalAgent.maxSockets)
+    cb(er)
+  })
   this.server = server
+
+  var addr = '/tmp/manger-repl.sock'
+  this.startREPL(addr, function onrepl (er, server) {
+    ctx.log.info('REPL started at ' + addr)
+    me.repl = server
+  })
 }
 
+// Only for testing. Restarting is undefined.
 MangerService.prototype.stop = function (cb) {
-  this.manger.removeListener('error', this.errorHandler)
-  var db = this.db
-  this.server.close(function (er) {
-    if (db) {
-      db.close(function (er) {
-        cb(er)
-      })
-    } else {
-      cb(er)
+  cb = cb || nop
+  var me = this
+  function closeServer () {
+    var server = me.server
+    server ? server.close(next) : next()
+  }
+  function closeDB () {
+    var db = me.manger ? me.manger.db : null
+    db ? db.close(next) : next()
+  }
+  function closeREPL () {
+    var repl = me.repl
+    repl ? repl.close(next) : next()
+  }
+  var tasks = [closeServer, closeDB, closeREPL]
+  function next (er) {
+    if (er) {
+      var error = new Error('stop error: ' + er.message)
+      me.log.warn(error)
     }
-  })
+    var f = tasks.shift()
+    if (f) {
+      f()
+    } else {
+      if (me.errorHandler) {
+        me.manger.removeListener('error', me.errorHandler)
+      }
+      me.manger = null
+      me.repl = null
+      me.server = null
+      cb()
+    }
+  }
+  next()
 }
 
 if (parseInt(process.env.NODE_TEST, 10) === 1) {

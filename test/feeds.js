@@ -1,7 +1,10 @@
-var test = require('tap').test
-var rimraf = require('rimraf')
-var http = require('http')
 var common = require('./lib/common')
+var fs = require('fs')
+var http = require('http')
+var nock = require('nock')
+var path = require('path')
+var rimraf = require('rimraf')
+var test = require('tap').test
 
 var server = common.freshServer()
 
@@ -14,6 +17,16 @@ test('setup', function (t) {
 })
 
 test('feed', function (t) {
+  var scope = nock('http://www.newyorker.com')
+  var headers = {
+    'content-type': 'application/json',
+    'ETAG': '55346232-18151'
+  }
+  scope.get('/feed/posts').reply(200, function () {
+    var p = path.join(__dirname, 'data', 'newyorker.xml')
+    return fs.createReadStream(p)
+  }, headers)
+
   t.plan(3)
   var uri = encodeURIComponent('http://www.newyorker.com/feed/posts')
   var opts = {
@@ -30,9 +43,7 @@ test('feed', function (t) {
     res.on('end', function () {
       var found = JSON.parse(buf)
       t.is(found.length, 1)
-      t.ok(found[0].title)
-      // As the content is not under our control, it does not make sense
-      // to test more than mere existance.
+      t.is(found[0].title, 'The New Yorker: Blogs')
     })
   })
   req.end()

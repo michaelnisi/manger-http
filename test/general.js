@@ -16,7 +16,7 @@ test('setup', function (t) {
 test('home', function (t) {
   t.plan(2)
   http.get('http://localhost:1337', function (res) {
-    t.is(res.statusCode, 400)
+    t.is(res.statusCode, 200)
     var buf = ''
     res.on('data', function (chunk) {
       buf += chunk
