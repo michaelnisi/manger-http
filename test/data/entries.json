@@ -1,0 +1,53 @@
+[
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "GET",
+    "path": "/entries"
+  },
+  "response": {
+    "statusCode": 405,
+    "payload": {
+      "error": "method not allowed",
+      "reason": "GET /entries is undefined"
+    }
+  }
+},
+{
+  "remote": [
+  {
+    "host": "http://www.newyorker.com",
+    "path": "/feed/posts",
+    "headers": {
+      "content-type": "application/json",
+      "ETAG": "55346232-18151"
+    },
+    "file": "newyorker.xml"
+  },
+  {
+    "host": "http://feeds.feedburner.com",
+    "path": "/thememorypalace",
+    "headers": {
+      "content-type": "application/json",
+      "ETAG": "55346232-18151"
+    },
+    "file": "thememorypalace.xml"
+  }],
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "POST",
+    "path": "/entries",
+    "payload": [
+      { "url": "http://www.newyorker.com/feed/posts",
+        "since": "04 Aug 2015" },
+      { "url": "http://feeds.feedburner.com/thememorypalace",
+        "since": "03 Aug 2015" }
+    ]
+  },
+  "response": [
+    { "title": "Episode 72 (Run-of-the-River" }
+  ]
+}
+]

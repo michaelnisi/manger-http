@@ -13,7 +13,7 @@ SMF_ROOT=/var/svc/manifest/network
 SVC_ROOT=/opt/podest/manger
 
 copy () {
-  if [ -n "$(svcs manger | grep online)" ]; then
+  if [ -n "$(svcs manger | grep -sq online)" ]; then
     echo "manger appears to be online"
     exit 1
   fi
@@ -32,7 +32,7 @@ import_manifest () {
 schedule_updates () {
   # TODO: Set to daily
   local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
-  if [ "$( crontab -l | grep localhost/feeds )" ]; then
+  if [ "$( crontab -l | grep -sq localhost/feeds )" ]; then
     echo "** Updates already scheduled"
   else
     (crontab -l; echo "$job" ) | crontab

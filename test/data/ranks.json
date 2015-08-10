@@ -1,0 +1,111 @@
+[
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "GET",
+    "path": "/ranks"
+  },
+  "response": [
+  ]
+},
+{
+  "remote": [
+  {
+    "host": "http://www.newyorker.com",
+    "path": "/feed/posts",
+    "headers": {
+      "content-type": "application/json",
+      "ETAG": "55346232-18151"
+    },
+    "file": "newyorker.xml"
+  },
+  {
+    "host": "http://feeds.feedburner.com",
+    "path": "/thememorypalace",
+    "headers": {
+      "content-type": "application/json",
+      "ETAG": "55346232-18151"
+    },
+    "file": "thememorypalace.xml"
+  }],
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "POST",
+    "path": "/feeds",
+    "payload": [
+      { "url": "http://www.newyorker.com/feed/posts" },
+      { "url": "http://feeds.feedburner.com/thememorypalace" }
+    ]
+  },
+  "response": [
+    { "title": "The New Yorker: Blogs" },
+    { "title": "the memory palace" }
+  ]
+},
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "POST",
+    "path": "/entries",
+    "payload": [
+      { "url": "http://feeds.feedburner.com/thememorypalace" }
+    ]
+  },
+  "response": [
+  ],
+  "TODO": "Why do feeds not count?"
+},
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "PUT",
+    "path": "/ranks"
+  },
+  "response": {
+    "statusCode": 202,
+    "payload": {
+      "ok": true
+    }
+  }
+},
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "GET",
+    "path": "/ranks"
+  },
+  "response": [
+    "http://feeds.feedburner.com/thememorypalace",
+    "http://www.newyorker.com/feed/posts"
+  ]
+},
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "DELETE",
+    "path": "/ranks"
+  },
+  "response": {
+    "statusCode": 202,
+    "payload": {
+      "ok": true
+    }
+  }
+},
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "GET",
+    "path": "/ranks"
+  },
+  "response": [
+  ]
+}
+]

@@ -19,7 +19,24 @@ Date: Sat, 04 Jul 2015 14:08:40 GMT
 Connection: keep-alive
 ```
 
-All endpoints respond with JSON payloads and are offering gzip encoding.
+All endpoints respond with JSON payloads and offer gzip encoding.
+
+If there is no response payload you get:
+
+```json
+{
+  "ok": true
+}
+```
+
+Errors are JSON too, for example:
+
+```json
+{
+  "error": "not found",
+  "reason": "/x is not an endpoint"
+}
+```
 
 ### Types
 
@@ -75,7 +92,6 @@ An individual entry.
 - `title` `str()`
 - `updated` `str()`
 
-
 #### date()
 
 Anything `Date()` can parse.
@@ -100,7 +116,7 @@ An `Array()` of `query()` objects.
 Response
 
 - `name` The name of the server
-- `version` The version of the package
+- `version` The version of the API (the package version)
 
 ### Retrieving and deleting feeds
 
@@ -110,18 +126,18 @@ Response
 GET /feed/:uri
 ```
 
-- `uri` The url-encoded URL of the feed
+- `:uri` The url-encoded URL of the feed
 
-The response is an Array containing one `feed()`.
+The response is an `Array()` containing the requested `feed()` or an empty `Array()` if the feed could not be found.
 
 #### Remove a feed from the cache
 
 ```
 DELETE /feed/:uri
 ```
-- `uri` The url-encoded URL of the feed
+- `:uri` The url-encoded URL of the feed
 
-Response
+The response is a confirmation:
 
 - `ok` `Boolean()`
 - `id` `String()` The URL of the feed
@@ -137,11 +153,9 @@ or
 GET /feeds
 ```
 
-Response
+An Array containing the URLs of all feeds in the cache.
 
-An Array containing the URLs of all cached feeds.
-
-To get the total number of feeds in the store, you might do something like:
+To count the feeds in the store, you could do something like:
 
 ```
 curl -s localhost:8384/feeds | json -ga | wc -l
@@ -153,33 +167,69 @@ curl -s localhost:8384/feeds | json -ga | wc -l
 POST /feeds
 ```
 
-Where the request payload has to be `queries()`.
+Where the message body has to be `queries()`. Note that time ranges (defined by `since`) are ignored here.
 
 The response is an `Array()` of `feed()` objects.
 
 ### Retrieving entries
 
+#### All entries of a specific feed
+
 ```
 GET /entries/:uri
 ```
+
+- `:uri` The url-encoded URL of the feed
+
+Responds with an `Array()` of `entry()` objects or an empty `Array()`.
+
+#### Selected entries of any feed
 
 ```
 /POST entries
 ```
 
+As in `/POST feeds`, the message body has to be `queries()`, in this case though, time ranges filter entries.
+
+The response is an `Array()` of `entry()` objects.
+
 ### Updating the cache
 
+#### Update all feeds
+
 ```
-/GET update
+/PUT feeds
 ```
+
+Update all feeds in the store in ranked order—thus the rank index gets refreshed first. All this IO can make this operation run significantly long. To keep track of these, there is an info level log when it completes.
+
+The immediate response is a `202 Accepted` with `{ "ok": true }`.
+
+#### All feed URLs in ranked order
 
 ```
 /GET ranks
 ```
 
+An `Array()` with all feed URLs in the cache ordered by number of requests.
+
+For the top-ten you could do:
+
+```
+curl -s localhost:8384/ranks | json -ga | head
+```
+
+#### Update the ranks
+
+Request counts are not updated live, but are kept in memory. This operation flushes these changes and updates the rank index.
+
 ```
 /PUT ranks
 ```
+
+#### Reset ranks
+
+Reset ranks by deleting the rank index.
 
 ```
 /DELETE ranks

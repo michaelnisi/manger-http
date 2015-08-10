@@ -1,5 +1,5 @@
-// manger-http - provide HTTP interface for manger
-//
+// manger-http - cache feeds
+
 module.exports = exports = MangerService
 
 var HttpHashRouter = require('http-hash-router')
@@ -160,7 +160,6 @@ function query (s, req, opts, cb) {
   queries.pipe(s)
 }
 
-// API: /POST /feeds
 function feeds (req, res, opts, cb) {
   var s = opts.manger.feeds()
   query(s, req, opts, cb)
@@ -171,7 +170,6 @@ function urlFromParams (params) {
   return typeof str === 'string' ? unescape(str) : null
 }
 
-// API: /GET /feed/:uri
 function single (s, req, res, opts, cb) {
   var t = time()
   var buf = ''
@@ -181,16 +179,24 @@ function single (s, req, res, opts, cb) {
       buf += chunk
     }
   })
+  function onerror (er) {
+    // TODO: Understand why all these errors occur after `end`
+    var error = new Error(er.message)
+    onend(error)
+  }
   function onend (er) {
-    if (!buf) return
-    s.removeListener('onend', onend)
-    s.removeListener('error', onend)
+    if (!buf) {
+      opts.log.warn(er) // still log after end
+      return
+    }
+    s.removeListener('end', onend)
+    s.removeListener('error', onerror)
     var sc = er ? er.statusCode || 404 : 200
     cb(er, sc, buf, t)
     buf = null
   }
-  s.on('finish', onend)
-  s.on('error', onend)
+  s.on('end', onend)
+  s.on('error', onerror)
 
   var params = opts.params
   var uri = urlFromParams(params)
@@ -203,13 +209,11 @@ function feed (req, res, opts, cb) {
   single(s, req, res, opts, cb)
 }
 
-// API: /GET /entries/:uri
 function entriesOfFeed (req, res, opts, cb) {
   var s = opts.manger.entries()
   single(s, req, res, opts, cb)
 }
 
-// API: /DELETE /feed/:uri
 function deleteFeed (req, res, opts, cb) {
   var t = time()
   var params = opts.params
@@ -243,7 +247,6 @@ function deleteFeed (req, res, opts, cb) {
   })
 }
 
-// API: /POST /entries
 function entries (req, res, opts, cb) {
   var s = opts.manger.entries()
   query(s, req, opts, cb)
@@ -361,13 +364,11 @@ function urls (readable, opts, cb) {
   readable.on('end', onend)
 }
 
-// API: /GET /feeds
 function list (req, res, opts, cb) {
   var s = opts.manger.list()
   urls(s, opts, cb)
 }
 
-// API: /* /
 function root (req, res, opts, cb) {
   var payload = JSON.stringify({
     name: 'manger',
@@ -381,7 +382,6 @@ function ranks (req, res, opts, cb) {
   urls(s, opts, cb)
 }
 
-// API: /DELETE /ranks
 function resetRanks (req, res, opts, cb) {
   cb(null, 202, OK)
   var cache = opts.manger
@@ -393,7 +393,6 @@ function resetRanks (req, res, opts, cb) {
   })
 }
 
-// API: /PUT /ranks
 function flushCounter (req, res, opts, cb) {
   cb(null, 202, OK)
   var cache = opts.manger
@@ -529,20 +528,38 @@ MangerService.prototype.start = function (cb) {
   var ctx = new ReqOpts(this.log, this.manger, false, this.version)
 
   function onrequest (req, res) {
-    ctx.log.info('/' + req.method + ' ' + req.url)
+    ctx.log.info(req.method + ' ' + req.url)
 
     function terminate (er, statusCode, payload, time) {
       if (er) {
-        if (er.type === 'http-hash-router.not-found') {
-          var reason = req.url + ' is not an endpoint'
-          ctx.log.warn(reason)
-          statusCode = 404
-          payload = JSON.stringify({
-            error: 'not found',
-            reason: reason
-          })
+        var payloads = {
+          404: function () {
+            var reason = req.url + ' is not an endpoint'
+            ctx.log.warn(reason)
+            statusCode = 404
+            payload = JSON.stringify({
+              error: 'not found',
+              reason: reason
+            })
+          },
+          405: function () {
+            var reason = req.method + ' ' + req.url + ' is undefined'
+            ctx.log.warn(reason)
+            statusCode = 405
+            payload = JSON.stringify({
+              error: 'method not allowed',
+              reason: reason
+            })
+          }
+        }
+        if (er.statusCode in payloads) {
+          payloads[er.statusCode]()
         } else if (ok(er)) {
-          ctx.log.warn(er.message)
+          if (!payload) {
+            ctx.log.error(er)
+            throw er
+          }
+          ctx.log.warn(er)
         } else {
           ctx.log.error(er)
           throw er
