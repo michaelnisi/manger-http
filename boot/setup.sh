@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # set -o xtrace
 
@@ -12,7 +12,7 @@ PROFILE=/root/.bashrc
 SMF_ROOT=/var/svc/manifest/network
 SVC_ROOT=/opt/podest/manger
 
-copy () {
+copy() {
   if [ -n "$(svcs manger | grep -sq online)" ]; then
     echo "manger appears to be online"
     exit 1
@@ -23,13 +23,13 @@ copy () {
   cp -rf ./node_modules $SVC_ROOT
 }
 
-import_manifest () {
+import_manifest() {
   cp ./smf/manifests/manger.xml "$SMF_ROOT"
   svcadm restart manifest-import
   svcadm enable manger
 }
 
-schedule_updates () {
+schedule_updates() {
   # TODO: Set to daily
   local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
   if [ "$( crontab -l | grep -sq localhost/feeds )" ]; then
