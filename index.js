@@ -84,6 +84,7 @@ function respond (req, res, statusCode, payload, time, opts) {
   if (gz) {
     zlib.gzip(payload, function (er, zipped) {
       var h = headers(zipped.length, lat(), 'gzip')
+      // TODO: line 87 crashed with undefined res
       res.writeHead(statusCode, h)
       res.end(zipped)
     })
