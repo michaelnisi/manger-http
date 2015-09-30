@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# set -o xtrace
+set -o xtrace
 
 SOURCE="${BASH_SOURCE[0]}"
 if [[ -h $SOURCE ]]; then
