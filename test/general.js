@@ -25,7 +25,7 @@ test('home', function (t) {
       var found = JSON.parse(buf)
       var wanted = {
         name: 'manger',
-        version: '1.0.0'
+        version: '1.0.1'
       }
       t.same(wanted, found)
     })
@@ -49,7 +49,6 @@ test('not found', function (t) {
       t.same(wanted, found)
     })
   })
-
 })
 
 test('teardown', function (t) {

@@ -1,5 +1,7 @@
 // manger-http - cache feeds
 
+// TODO: Handle HEAD requests
+
 module.exports = exports = MangerService
 
 var HttpHashRouter = require('http-hash-router')
@@ -33,7 +35,7 @@ var ns = (function () {
 
 function headers (len, lat, enc) {
   var headers = {
-    'Cache-Control': 'must-revalidate, max-age=' + 86400,
+    'Cache-Control': 'max-age=' + 86400,
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': len
   }
@@ -53,7 +55,9 @@ function getGz (req) {
   return gz
 }
 
-// A general responder for bufferd payloads that applies gzip compression
+// TODO: Move into separate module
+
+// A general responder for buffered payloads that applies gzip compression
 // if requested.
 //
 // - req IncomingMessage The request
@@ -61,7 +65,7 @@ function getGz (req) {
 // - statusCode Number The HTTP status code
 // - payload Buffer | String The JSON payload
 // - time Array | void The hi-res real time tuple of when the request hit
-// - otps ReqOpts The options objects
+// - opts ReqOpts The options objects // TODO: Replace with log
 function respond (req, res, statusCode, payload, time, opts) {
   assert(!res.finished, 'attempted to respond more than once')
   function onfinish () {
@@ -440,15 +444,15 @@ function defaults (opts) {
   opts.location = opts.location || '/tmp/manger-http'
   opts.port = opts.port || 8384
   opts.log = opts.log || { info: nop, warn: nop, debug: nop, error: nop }
-  opts.ttl = opts.ttl || 24 * 36e5
+  opts.ttl = opts.ttl || 24 * 3600 * 1000
   opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
   return opts
 }
 
 function MangerService (opts) {
-  opts = defaults(opts)
   if (!(this instanceof MangerService)) return new MangerService(opts)
 
+  opts = defaults(opts)
   util._extend(this, opts)
 
   this.router = router()

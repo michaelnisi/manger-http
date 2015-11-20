@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "HTTP API for manger",
   "main": "index.js",
   "scripts": {
