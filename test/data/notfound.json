@@ -1,0 +1,15 @@
+{
+  "request": {
+    "host": "localhost",
+    "port": 1337,
+    "method": "GET",
+    "path": "/hello"
+  },
+  "response": {
+    "statusCode": 404,
+    "payload": {
+      "error": "not found",
+      "reason": "/hello is not an endpoint"
+    }
+  }
+}

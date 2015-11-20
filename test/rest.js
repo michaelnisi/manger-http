@@ -116,7 +116,7 @@ test('basic REST API', { bail: true }, function (t) {
     }
   }
   t.plan(++count)
-  t.is(count, 55, 'should be anal')
+  t.is(count, 57, 'should be anal')
   run(tests)
 })
 
