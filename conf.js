@@ -4,15 +4,17 @@ var bunyan = require('bunyan')
 var http = require('http')
 
 function log () {
-  var level = parseInt(process.env.NODE_LOG_LEVEL, 10) || 40
-  var levels = [10, 20, 30, 40, 50, 60]
-  if (levels.some(function (l) { return level === l })) {
-    return bunyan.createLogger({
-      name: 'manger',
-      level: level,
-      serializers: bunyan.stdSerializers
-    })
+  var level = 20
+  if (parseInt(process.env.NODE_DEBUG, 10) !== 1) {
+    level = parseInt(process.env.NODE_LOG_LEVEL, 10)
   }
+  var levels = [10, 20, 30, 40, 50, 60]
+  if (!levels.some(function (l) { return l === level })) level = 40
+  return bunyan.createLogger({
+    name: 'manger',
+    level: level,
+    serializers: bunyan.stdSerializers
+  })
 }
 
 exports.log = log()
