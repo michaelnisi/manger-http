@@ -11,7 +11,7 @@ function log () {
   var levels = [10, 20, 30, 40, 50, 60]
   if (!levels.some(function (l) { return l === level })) level = 40
   return bunyan.createLogger({
-    name: 'fanboy',
+    name: 'manger',
     level: level,
     serializers: bunyan.stdSerializers
   })
