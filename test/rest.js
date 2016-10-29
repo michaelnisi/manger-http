@@ -12,35 +12,38 @@ function parse (file) {
   return json instanceof Array ? json : [json]
 }
 
-function countTests (children) {
-  return children.length * 2 + children.reduce(function (a, child) {
-    var remote = child.remote
-    if (remote) {
-      var remotes = remote instanceof Array ? remote : [remote]
-      return a + remotes.length * 2
-    } else {
-      return a
-    }
-  }, 0)
-}
+test('abort', (t) => {
+  var server = common.freshServer()
+  server.start((er) => {
+    if (er) throw er
+    const req = http.get('http://localhost:1337/', () => {})
+    req.on('error', (er) => {
+      t.is(er.code, 'ECONNRESET')
+      server.stop((er) => {
+        if (er) throw er
+        t.end()
+      })
+    })
+    process.nextTick(() => {
+      req.abort()
+    })
+  })
+})
 
-test('basic REST API', { bail: true }, function (t) {
+test('basic REST API', function (t) {
   var p = path.resolve(__dirname, 'data')
   var files = fs.readdirSync(p)
   var scopes = []
-  var count = 0
   var tests = files.reduce(function (acc, file) {
     if (path.extname(file) !== '.json') {
       return acc
     }
     var children = parse(file)
-    count += countTests(children)
 
     function go (children, cb) {
       var child = children.shift()
       if (!child) {
-        cb()
-        return
+        return cb()
       }
       var remote = child.remote
       if (remote) {
@@ -74,7 +77,7 @@ test('basic REST API', { bail: true }, function (t) {
           if (sc === 202) {
             setTimeout(function () {
               go(children, cb)
-            }, 100)
+            }, 500)
           } else {
             go(children, cb)
           }
@@ -103,6 +106,7 @@ test('basic REST API', { bail: true }, function (t) {
     acc.push(closure)
     return acc
   }, [])
+
   function run (tests) {
     var f = tests.shift()
     if (f) {
@@ -113,10 +117,9 @@ test('basic REST API', { bail: true }, function (t) {
       scopes.forEach(function (scope) {
         t.ok(scope.isDone())
       })
+      t.is(tests.length, 0, 'should test all')
+      t.end()
     }
   }
-  t.plan(++count)
-  t.is(count, 57, 'should be anal')
   run(tests)
 })
-

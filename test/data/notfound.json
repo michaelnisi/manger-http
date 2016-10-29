@@ -9,7 +9,7 @@
     "statusCode": 404,
     "payload": {
       "error": "not found",
-      "reason": "/hello is not an endpoint"
+      "reason": "/hello is no route"
     }
   }
 }
