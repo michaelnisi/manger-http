@@ -181,7 +181,7 @@ GET /entries/:uri
 
 - `:uri` The url-encoded URL of the feed
 
-Responds with an `Array()` of `entry()` objects or an empty `Array()`.
+Responds with an `Array()` of `entry()` objects or an empty `Array()`. These `GET` APIs are to facilitate caching, thus they don’t allow for time ranged requests, which would just belittle chances of hitting the cache.
 
 #### Selected entries of any feed
 
