@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
@@ -27,10 +27,10 @@
     "test": "test"
   },
   "dependencies": {
-    "bunyan": "^1.8.1",
+    "bunyan": "^1.8.5",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^3.0.0",
+    "manger": "^6.1.0",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1",
     "readable-stream": "^2.1.5"
@@ -42,7 +42,7 @@
     "tap": "^7.1.1"
   },
   "engines": {
-    "node": ">=4"
+    "node": ">=6"
   },
   "author": "Michael Nisi <michael.nisi@gmail.com> (http://michaelnisi.com/)"
 }

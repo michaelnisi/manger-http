@@ -2,17 +2,19 @@
 
 // config - configure manger-http
 
-var bunyan = require('bunyan')
-var http = require('http')
+const bunyan = require('bunyan')
+const http = require('http')
 
 function level (l) {
-  return [10, 20, 30, 40, 50, 60].includes(l) ? l : bunyan.WARN
+  return [10, 20, 30, 40, 50, 60].includes(l) ? l : null
 }
 
 function log () {
+  const l = level(parseInt(process.env.NODE_LOG_LEVEL, 10))
+  if (!l) return null
   return bunyan.createLogger({
     name: 'manger',
-    level: level(parseInt(process.env.NODE_LOG_LEVEL, 10)),
+    level: l,
     serializers: bunyan.stdSerializers
   })
 }

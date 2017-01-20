@@ -15,7 +15,7 @@ const manger = require('manger')
 const mkdirp = require('mkdirp')
 const path = require('path')
 const url = require('url')
-const util = require('util')
+const querystring = require('querystring')
 const zlib = require('zlib')
 
 function nop () {}
@@ -60,12 +60,10 @@ function getGz (req) {
 // - log The logger to use.
 function respond (req, res, statusCode, payload, time, log) {
   assert(!res.finished, 'cannot respond more than once')
+
   function onfinish () {
     res.removeListener('close', onclose)
     res.removeListener('finish', onfinish)
-    res = null
-    req = null
-    log = null
   }
   function onclose () {
     log.warn('connection terminated: ' + req.url)
@@ -78,7 +76,7 @@ function respond (req, res, statusCode, payload, time, log) {
     }
   }
   if (gz) {
-    zlib.gzip(payload, function gzipHandler (er, zipped) {
+    zlib.gzip(payload, (er, zipped) => {
       if (!res) return
       const h = headers(zipped.length, lat(), 'gzip')
       res.writeHead(statusCode, h)
@@ -94,24 +92,26 @@ function respond (req, res, statusCode, payload, time, log) {
   res.on('finish', onfinish)
 }
 
+const whitelist = RegExp([
+  'ECONNREFUSED',
+  'ECONNRESET',
+  'ENOTFOUND',
+  'ETIMEDOUT',
+  'recently updated',
+  'client error',
+  'not deleted',
+  'parse error',
+  'quaint HTTP status',
+  'query error',
+  'request error',
+  'socket hang up',
+  'too many redirects'
+].join('|'), 'i')
+
 // Assess specified error by its message returning `true`, if it might be OK to
 // continue after this error has occured.
 function ok (er) {
-  var ok = false
-  const whitelist = RegExp([
-    'ECONNREFUSED',
-    'ECONNRESET',
-    'ENOTFOUND',
-    'ETIMEDOUT',
-    'already updating',
-    'client error',
-    'not deleted',
-    'parse error',
-    'quaint HTTP status',
-    'query error',
-    'request error',
-    'socket hang up'
-  ].join('|'), 'i')
+  let ok = false
   if (er) {
     const msg = er.message
     if (msg) ok = msg.match(whitelist) !== null
@@ -121,14 +121,13 @@ function ok (er) {
 
 function query (s, req, opts, cb) {
   const t = time()
+  const queries = manger.Queries()
 
-  var queries = manger.queries()
-  var buf = ''
+  let buf = ''
 
   function onError (error) {
     const er = new Error(error.message)
     er.url = error.url
-
     if (ok(er)) {
       opts.log.error({ err: er, url: er.url })
     } else {
@@ -155,6 +154,7 @@ function query (s, req, opts, cb) {
 
     assert(queries._readableState.ended, 'queries should always end')
     assert(queries._writableState.ended, 'queries should always end')
+
     queries.removeListener('error', onError)
     queries.removeListener('warning', onError)
     queries.removeListener('data', onQuery)
@@ -162,15 +162,13 @@ function query (s, req, opts, cb) {
 
     assert(s._readableState.ended, 'stream should always end')
     assert(s._writableState.ended, 'stream should always end')
+
     s.removeListener('error', onError)
     s.removeListener('data', onData)
     s.removeListener('end', onEnd)
 
     const sc = er ? er.statusCode || 404 : 200
-    cb(er, sc, buf, t)
-
-    // Making sure we'd notice sloppy event handling.
-    s = req = opts = cb = queries = buf = null
+    if (cb) cb(er, sc, buf, t)
   }
 
   req.on('error', onError)
@@ -207,10 +205,11 @@ function crash (er, log) {
 // an error, but a 200 and an empty result array instead. I'm not crazy about this!
 function single (s, req, res, opts, cb) {
   const t = time()
-  var buf = ''
+
+  let buf = ''
 
   function onreadable () {
-    var chunk
+    let chunk
     while ((chunk = s.read()) !== null) {
       buf += chunk
     }
@@ -228,9 +227,7 @@ function single (s, req, res, opts, cb) {
     s.removeListener('error', onerror)
     s.removeListener('readable', onreadable)
 
-    cb(null, 200, buf, t)
-
-    s = req = res = opts = buf = cb = null
+    if (cb) cb(null, 200, buf, t)
   }
   s.on('error', onerror)
   s.on('end', onend)
@@ -263,9 +260,9 @@ function deleteFeed (req, res, opts, cb) {
   const uri = urlFromParams(params)
   const cache = opts.manger
   cache.remove(uri, function cacheRemoveHandler (er) {
-    var sc = 200
-    var buf
-    var error
+    let sc = 200
+    let buf
+    let error
     if (er) {
       const problem = 'not deleted'
       var reason
@@ -309,16 +306,15 @@ const NOT_OK = JSON.stringify({
 
 const ONE_DAY = 1.15741e8
 
-// Update all feeds currently in the cache, ordered by rank. This uses a stream as a
-// serial queue to update the feeds in order. Use this function by binding it to
-// a `MangerService` object--it is the only stateful route of this service.
+// Updates the cache, where `this` is a `MangerService` object.
 function update (req, res, opts, cb) {
   const now = Date.now()
   const then = this.updating
-  const locked = typeof then === 'number' ? now - then < ONE_DAY : false
+  const limit = ONE_DAY // TODO: Make allowed update frequency configurable
+  const locked = typeof then === 'number' ? now - then < limit : false
 
   if (locked) {
-    const er = new Error('update error: already updating')
+    const er = new Error('update error: recently updated')
     return cb(er, 423, NOT_OK)
   }
 
@@ -326,9 +322,10 @@ function update (req, res, opts, cb) {
   // limit the duration, currently one day, of the lock.
   this.updating = now
 
-  var me = this
+  const cache = opts.manger
+  const log = opts.log
 
-  opts.manger.flushCounter(function onFlushCounter (er, feedCount) {
+  cache.flushCounter((er, feedCount) => {
     if (er) {
       const failure = 'not updated'
       const reason = er.message
@@ -337,35 +334,31 @@ function update (req, res, opts, cb) {
         error: failure,
         reason: reason
       })
-      cb(error, 500, payload)
-      cb = null
-
-      me.updating = null
-      me = null
-      opts = null
-      return
+      this.updating = null
+      return cb ? cb(error, 500, payload) : null
     }
-    cb(null, 202, OK)
-    cb = null
+    if (cb) cb(null, 202, OK)
 
     if (feedCount === 0) {
-      opts.log.warn('empty cache')
-      me.updating = null
-      return
+      log.warn('empty cache')
+      return (this.updating = null)
     }
 
-    const x = 1
-    var s = opts.manger.update(x)
+    const feedsPerStream = 10 // TODO: Use 100 feeds per stream or so
+    const x = Math.min(Math.ceil(feedCount / feedsPerStream), 10)
+    const s = cache.update(x)
     const t = time()
-    var count = 0
+
+    let count = 0
+
     function ondata (feed) {
-      opts.log.debug('updated', feed.feed)
+      log.debug('updated', feed.feed)
       count++
     }
-    var errors = []
+    const errors = []
     function onerror (er) {
       if (ok(er)) {
-        opts.log.warn({ err: er, url: er.url }, 'update')
+        log.warn({ err: er, url: er.url }, 'update')
         errors.push(er)
       } else {
         const failure = 'update error'
@@ -378,9 +371,8 @@ function update (req, res, opts, cb) {
       s.removeListener('data', ondata)
       s.removeListener('error', onerror)
       s.removeListener('end', onend)
-      s = null
       if (count > 0) {
-        var lat
+        let lat
         if (t) lat = ns(time(t))
         const secs = lat ? (lat / 1e9).toFixed(2) : ''
         const info = {
@@ -389,14 +381,12 @@ function update (req, res, opts, cb) {
           latency: secs
         }
         opts.log.info(info, 'updated')
-      //
-      // If we have received 'ENOTFOUND' for all feeds we've been trying to update,
-      // tolerating maximally five of five, we can assume that we have no outbound
-      // Internet connectivity--although we've just been counting errors, without
-      // relating them to the feeds. To get the attention of an operator we
-      // deliberately opt to crash.
-      //
       } else if (feedCount > 5 && errors.filter((er) => {
+        // If we have received 'ENOTFOUND' for all feeds we've been trying to
+        // update, tolerating maximally five of five, we can assume that we
+        // have no outbound Internet connectivity--although we've just been
+        // counting errors, without relating them to the feeds. To get the
+        // attention of an operator we deliberately opt to crash.
         return er.code === 'ENOTFOUND'
       }).length >= feedCount) {
         const er = new Error('no connection')
@@ -404,10 +394,7 @@ function update (req, res, opts, cb) {
       } else {
         opts.log.warn('no updates')
       }
-      req = null
-
-      me.updating = null
-      opts = null
+      this.updating = null
     }
     s.on('data', ondata)
     s.on('error', onerror)
@@ -428,22 +415,19 @@ function urls (readable, opts, cb) {
   assert(cb, 'callback required')
   const sc = 200
   const t = time()
-  var urls = []
+  const urls = []
   function onend (er) {
-    if (!urls) return
     readable.removeListener('data', ondata)
     readable.removeListener('error', onerror)
     readable.removeListener('end', onend)
     const payload = JSON.stringify(urls)
-    urls = null
-    cb(null, sc, payload, t)
+    if (cb) cb(null, sc, payload, t)
   }
   function onerror (er) {
     onend(er)
   }
-  var decoder
+  const decoder = new StringDecoder('utf8')
   function decode (chunk) {
-    if (!decoder) decoder = new StringDecoder('utf8')
     return decoder.write(chunk)
   }
   function ondata (chunk) {
@@ -468,12 +452,19 @@ function root (req, res, opts, cb) {
     name: 'manger',
     version: opts.version
   })
-  cb(null, 200, payload)
+  return cb ? cb(null, 200, payload) : null
+}
+
+function limit (query) {
+  if (!query) return
+  const limit = Number(querystring.parse(query).limit)
+  return limit > 0 ? limit : null
 }
 
 function ranks (req, res, opts, cb) {
-  const s = opts.manger.ranks()
-  urls(s, opts, cb)
+  const query = url.parse(req.url).query
+  const s = opts.manger.ranks(limit(query))
+  return urls(s, opts, cb)
 }
 
 function resetRanks (req, res, opts, cb) {
@@ -490,8 +481,10 @@ function resetRanks (req, res, opts, cb) {
 function flushCounter (req, res, opts, cb) {
   cb(null, 202, OK)
   const cache = opts.manger
-  cache.flushCounter(function flushCounterHandler (er, count) {
-    if (er) opts.log.warn(er)
+  const log = opts.log
+  cache.flushCounter((er, count) => {
+    if (er) log.warn(er)
+    log.debug({ count: count }, 'flushed')
   })
 }
 
@@ -521,7 +514,7 @@ function MangerService (opts) {
   if (!(this instanceof MangerService)) return new MangerService(opts)
 
   opts = defaults(opts)
-  util._extend(this, opts)
+  Object.assign(this, opts)
 
   this.hash = HttpHash()
   this.version = version()
@@ -545,13 +538,13 @@ MangerService.prototype.handleRequest = function (req, res, cb) {
     throw new Error('callback required to handle request')
   }
 
-  var pathname = url.parse(req.url).pathname
+  const pathname = url.parse(req.url).pathname
 
-  var route = this.hash.get(pathname)
+  const route = this.hash.get(pathname)
   if (route.handler === null) {
     const er = new Error('not found')
     er.statusCode = 404
-    return cb(er)
+    return cb ? cb(er) : null
   }
 
   const opts = new ReqOpts(
@@ -612,8 +605,6 @@ MangerService.prototype.setRoutes = function () {
 }
 
 MangerService.prototype.start = function (cb) {
-  cb = cb || nop
-
   const log = this.log
 
   const info = {
@@ -623,8 +614,18 @@ MangerService.prototype.start = function (cb) {
   }
   log.info(info, 'start')
 
+  // TODO: Refine item validation
+
   const cache = manger(this.location, {
-    cacheSize: this.cacheSize
+    cacheSize: this.cacheSize,
+    isEntry: (entry) => {
+      if (entry.enclosure) return true
+      // Just logging the URL, the whole entry seems too much.
+      log.warn(entry.url, 'invalid entry')
+    },
+    isFeed: (feed) => {
+      return true
+    }
   })
   this.errorHandler = errorHandler.bind(this)
   cache.on('error', this.errorHandler)
@@ -632,9 +633,7 @@ MangerService.prototype.start = function (cb) {
 
   this.setRoutes()
 
-  const me = this
-
-  function onrequest (req, res) {
+  const onrequest = (req, res) => {
     log.info({ method: req.method, url: req.url }, 'request')
 
     function terminate (er, statusCode, payload, time) {
@@ -671,12 +670,9 @@ MangerService.prototype.start = function (cb) {
         }
       }
       respond(req, res, statusCode, payload, time, log)
-
-      req = null
-      res = null
     }
 
-    me.handleRequest(req, res, terminate)
+    this.handleRequest(req, res, terminate)
   }
 
   const server = http.createServer(onrequest)
@@ -688,14 +684,16 @@ MangerService.prototype.start = function (cb) {
       sockets: http.globalAgent.maxSockets
     }
     log.info(info, 'listen')
-    cb(er)
+    if (cb) cb(er)
   })
 
   server.on('clientError', function (er, socket) {
+    //
     // Logging in the 'close' callback, because I've seen the call stack being
     // exceeded in bunyan.js, in line 958 at this moment, suggesting a race
     // condition in the error handler. To circumvent this, we also check if the
     // socket has been destroyed already, before we try to close it.
+    //
     socket.once('close', () => { log.warn(er) })
     if (!socket.destroyed) {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
@@ -707,38 +705,34 @@ MangerService.prototype.start = function (cb) {
 
 // Warning: Tests only! Restarting is undefined.
 MangerService.prototype.stop = function (cb) {
-  cb = cb || nop
-  const me = this
-  function closeServer () {
-    const server = me.server
+  const closeServer = () => {
+    const server = this.server
     server ? server.close(next) : next()
   }
-  function closeDB () {
-    const db = me.manger ? me.manger.db : null
+  const closeDB = () => {
+    const db = this.manger ? this.manger.db : null
     db ? db.close(next) : next()
   }
   const tasks = [closeServer, closeDB]
-  function next (er) {
+  const next = (er) => {
     if (er) {
       const error = new Error('stop error: ' + er.message)
-      me.log.warn(error)
+      this.log.warn(error)
     }
     const f = tasks.shift()
     if (f) {
       f()
     } else {
-      if (me.errorHandler) {
-        me.manger.removeListener('error', me.errorHandler)
+      if (this.errorHandler) {
+        this.manger.removeListener('error', this.errorHandler)
       }
-      me.manger = null
-      me.server = null
-      cb()
+      if (cb) cb()
     }
   }
   next()
 }
 
-if (parseInt(process.env.TAP, 10) === 1) {
+if (process.mainModule.filename.match(/test/) !== null) {
   exports.MangerService = MangerService
   exports.defaults = defaults
   exports.factor = factor

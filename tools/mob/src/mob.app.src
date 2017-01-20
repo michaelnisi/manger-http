@@ -1,0 +1,26 @@
+{application, mob, [
+  {description, "stress manger-http"},
+  {vsn, "0.2.0"},
+  {id, "git"},
+  {modules, [
+    mob,
+    mob_app,
+    mob_feeds,
+    mob_request,
+    mob_sup
+  ]},
+  {registered, [mob_feeds]},
+  {applications, [
+    kernel,
+    stdlib,
+    gun
+  ]},
+  {mod, {mob_app, []}},
+  {env, [
+    {host, "localhost"},
+    {port, 8384},
+    %% TODO: Use more feeds
+    {feeds, "FEEDS"},
+    {connections, 5}
+  ]}
+]}.
