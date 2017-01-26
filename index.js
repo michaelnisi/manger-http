@@ -21,7 +21,7 @@ const zlib = require('zlib')
 function nop () {}
 
 // Measure time for log levels below error, which would be 50 in bunyan.
-const debugging = parseInt(process.env.NODE_LOG_LEVEL, 10) < 50
+const debugging = parseInt(process.env.MANGER_LOG_LEVEL, 10) < 50
 const time = debugging ? process.hrtime : nop
 const ns = (() => {
   return debugging ? (t) => {
@@ -304,13 +304,12 @@ const NOT_OK = JSON.stringify({
   ok: false
 })
 
-const ONE_DAY = 1.15741e8
-
 // Updates the cache, where `this` is a `MangerService` object.
 function update (req, res, opts, cb) {
   const now = Date.now()
   const then = this.updating
-  const limit = ONE_DAY // TODO: Make allowed update frequency configurable
+  const limit = opts.maxUpdates
+
   const locked = typeof then === 'number' ? now - then < limit : false
 
   if (locked) {
@@ -344,15 +343,15 @@ function update (req, res, opts, cb) {
       return (this.updating = null)
     }
 
-    const feedsPerStream = 10 // TODO: Use 100 feeds per stream or so
-    const x = Math.min(Math.ceil(feedCount / feedsPerStream), 10)
+    const feedsPerStream = 64
+    const x = Math.min(Math.ceil(feedCount / feedsPerStream), 16)
     const s = cache.update(x)
     const t = time()
 
     let count = 0
 
     function ondata (feed) {
-      log.debug('updated', feed.feed)
+      log.debug('updated', feed.url)
       count++
     }
     const errors = []
@@ -505,7 +504,7 @@ function defaults (opts) {
       fatal: nop, error: nop, warn: nop, info: nop, debug: nop, trace: nop
     }
   })()
-  opts.ttl = opts.ttl || ONE_DAY
+  opts.ttl = opts.ttl || 1.15741e8
   opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
   return opts
 }
@@ -556,6 +555,10 @@ MangerService.prototype.handleRequest = function (req, res, cb) {
   )
 
   return route.handler(req, res, opts, cb)
+}
+
+function hitHandler (qry) {
+  this.log.debug(qry, 'hit')
 }
 
 function errorHandler (er) {
@@ -610,7 +613,8 @@ MangerService.prototype.start = function (cb) {
   const info = {
     version: this.version,
     location: this.location,
-    size: this.cachSize
+    cacheSize: this.cacheSize,
+    maxUpdates: this.maxUpdates
   }
   log.info(info, 'start')
 
@@ -627,8 +631,13 @@ MangerService.prototype.start = function (cb) {
       return true
     }
   })
+
   this.errorHandler = errorHandler.bind(this)
   cache.on('error', this.errorHandler)
+
+  this.hitHandler = hitHandler.bind(this)
+  cache.on('hit', this.hitHandler)
+
   this.manger = cache
 
   this.setRoutes()
@@ -678,7 +687,7 @@ MangerService.prototype.start = function (cb) {
   const server = http.createServer(onrequest)
   const port = this.port
 
-  server.listen(port, function (er) {
+  server.listen(port, (er) => {
     const info = {
       port: port,
       sockets: http.globalAgent.maxSockets
@@ -687,7 +696,7 @@ MangerService.prototype.start = function (cb) {
     if (cb) cb(er)
   })
 
-  server.on('clientError', function (er, socket) {
+  server.on('clientError', (er, socket) => {
     //
     // Logging in the 'close' callback, because I've seen the call stack being
     // exceeded in bunyan.js, in line 958 at this moment, suggesting a race
@@ -723,9 +732,7 @@ MangerService.prototype.stop = function (cb) {
     if (f) {
       f()
     } else {
-      if (this.errorHandler) {
-        this.manger.removeListener('error', this.errorHandler)
-      }
+      this.manger.removeAllListeners()
       if (cb) cb()
     }
   }

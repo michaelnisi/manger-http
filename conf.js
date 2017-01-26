@@ -10,7 +10,7 @@ function level (l) {
 }
 
 function log () {
-  const l = level(parseInt(process.env.NODE_LOG_LEVEL, 10))
+  const l = level(parseInt(process.env.MANGER_LOG_LEVEL, 10))
   if (!l) return null
   return bunyan.createLogger({
     name: 'manger',
@@ -19,13 +19,20 @@ function log () {
   })
 }
 
-exports.log = log()
-exports.location = process.env.LEVEL_DB_LOCATION
+const MAX_UPDATES = 8.64e7
+
+function maxUpdates () {
+  const max = parseInt(process.env.MANGER_MAX_UPDATES, 10)
+  return isNaN(max) ? MAX_UPDATES : max
+}
+
 exports.cacheSize = process.env.LEVEL_DB_CACHE_SIZE
-exports.port = process.env.PORT
+exports.location = process.env.LEVEL_DB_LOCATION
+exports.log = log()
 exports.maxSockets = http.globalAgent.maxSockets = 4096
+exports.maxUpdates = maxUpdates()
+exports.port = process.env.PORT
 
 if (module === require.main) {
   console.log(exports)
-  process.exit(0)
 }
