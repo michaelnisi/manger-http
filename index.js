@@ -20,9 +20,11 @@ const zlib = require('zlib')
 
 function nop () {}
 
-// Measure time for log levels below error, which would be 50 in bunyan.
-const debugging = parseInt(process.env.MANGER_LOG_LEVEL, 10) < 50
-const time = debugging ? process.hrtime : nop
+// Measure time for log levels below INFO, which would be 30 in bunyan.
+// Recommended level for general development is INFO (30), production
+// is suited by WARN (40) or better ERROR (50).
+const shouldMeasure = parseInt(process.env.MANGER_LOG_LEVEL, 10) < 30
+const time = shouldMeasure ? process.hrtime : nop
 const ns = (() => {
   return debugging ? (t) => {
     return t[0] * 1e9 + t[1]
@@ -50,7 +52,7 @@ function getGz (req) {
 }
 
 // A general responder for buffered payloads that applies gzip compression
-// if requested.
+// if requested and flushes request buffers.
 //
 // - req IncomingMessage The request.
 // - res ServerResponse The response.
@@ -62,6 +64,8 @@ function respond (req, res, statusCode, payload, time, log) {
   assert(!res.finished, 'cannot respond more than once')
 
   function onfinish () {
+    req.resume() // making sure buffers are flushed in all cases
+
     res.removeListener('close', onclose)
     res.removeListener('finish', onfinish)
   }
@@ -105,7 +109,8 @@ const whitelist = RegExp([
   'query error',
   'request error',
   'socket hang up',
-  'too many redirects'
+  'too many redirects',
+  'certificate'
 ].join('|'), 'i')
 
 // Assess specified error by its message returning `true`, if it might be OK to
@@ -119,68 +124,74 @@ function ok (er) {
   return ok
 }
 
+// Pipes request, via Queries, into Transform s and applies cb with result.
 function query (s, req, opts, cb) {
   const t = time()
   const queries = manger.Queries()
 
+  // Result
+
+  let err = null
   let buf = ''
 
-  function onError (error) {
-    const er = new Error(error.message)
-    er.url = error.url
-    if (ok(er)) {
-      opts.log.error({ err: er, url: er.url })
-    } else {
-      req.resume()
-      queries.end()
-      s.end(er)
-    }
+  // Request
+
+  const onRequestError = (er) => {
+    err = new Error(er.message)
   }
-  function onClose () {
+  const onRequestClose = () => {
     const er = new Error('client error: connection terminated')
-    onError(er)
-  }
-  function onData (chunk) {
-    buf += chunk
-  }
-  function onQuery (q) {
-    opts.log.debug(q, 'query')
+    onRequestError(er)
   }
 
-  function onEnd (er) {
-    req.removeListener('error', onError)
-    req.removeListener('close', onClose)
+  // Queries
+
+  const onQueriesError = (er) => {
+    err = new Error(er.message)
+  }
+  const onQueriesWarning = (er) => {
+    // Interestingly, the so called warning ends the pipe, which, although kind
+    // of handy now, was its whole purpose, not emitting an error.
+    err = new Error(er.message)
+  }
+  const onQueriesData = (q) => { opts.log.debug(q, 'query') }
+
+  // Transform
+
+  const onStreamError = (er) => {
+    err = new Error(er.message)
+  }
+  const onStreamData = (chunk) => { buf += chunk }
+  const onStreamEnd = () => {
+    req.removeListener('error', onRequestError)
+    req.removeListener('close', onRequestClose)
     req.unpipe(queries)
 
-    assert(queries._readableState.ended, 'queries should always end')
-    assert(queries._writableState.ended, 'queries should always end')
-
-    queries.removeListener('error', onError)
-    queries.removeListener('warning', onError)
-    queries.removeListener('data', onQuery)
+    queries.removeListener('error', onQueriesError)
+    queries.removeListener('warning', onQueriesWarning)
+    queries.removeListener('data', onQueriesData)
     queries.unpipe(s)
+    queries.resume()
 
-    assert(s._readableState.ended, 'stream should always end')
-    assert(s._writableState.ended, 'stream should always end')
+    s.removeListener('error', onStreamError)
+    s.removeListener('data', onStreamData)
+    s.removeListener('end', onStreamEnd)
+    s.resume()
 
-    s.removeListener('error', onError)
-    s.removeListener('data', onData)
-    s.removeListener('end', onEnd)
-
-    const sc = er ? er.statusCode || 404 : 200
-    if (cb) cb(er, sc, buf, t)
+    const sc = err ? err.statusCode || 404 : 200
+    if (cb) cb(err, sc, buf, t)
   }
 
-  req.on('error', onError)
-  req.on('close', onClose)
+  req.on('error', onRequestError)
+  req.on('close', onRequestClose)
 
-  queries.on('error', onError)
-  queries.on('warning', onError)
-  queries.on('data', onQuery)
+  queries.on('error', onQueriesError)
+  queries.on('warning', onQueriesWarning)
+  queries.on('data', onQueriesData)
 
-  s.on('error', onError)
-  s.on('data', onData)
-  s.on('end', onEnd)
+  s.on('error', onStreamError)
+  s.on('data', onStreamData)
+  s.on('end', onStreamEnd)
 
   req.pipe(queries)
   queries.pipe(s)
@@ -201,11 +212,14 @@ function crash (er, log) {
   process.nextTick(() => { throw er })
 }
 
-// Handle requests for a single feed or entries of a single feed, never returning
-// an error, but a 200 and an empty result array instead. I'm not crazy about this!
+// Handles requests for single feeds or entries of single feeds. The purpose
+// of these extra routes is to enhance external caching by using these clearcut
+// GET requests for singular things, which are quire common use cases for
+// our clients.
 function single (s, req, res, opts, cb) {
   const t = time()
 
+  let err = null
   let buf = ''
 
   function onreadable () {
@@ -215,19 +229,15 @@ function single (s, req, res, opts, cb) {
     }
   }
   function onerror (er) {
-    const error = new Error(er.message)
-    if (!ok(error)) return crash(error, opts.log)
-    opts.log.warn(error)
+    err = new Error(er.message)
   }
-  function onend (er) {
-    assert(s._readableState.ended, 'stream should always end')
-    assert(s._writableState.ended, 'stream should always end')
-
+  function onend () {
     s.removeListener('end', onend)
     s.removeListener('error', onerror)
     s.removeListener('readable', onreadable)
+    s.resume()
 
-    if (cb) cb(null, 200, buf, t)
+    if (cb) cb(err, 200, buf, t)
   }
   s.on('error', onerror)
   s.on('end', onend)
@@ -405,7 +415,7 @@ function latency (t, log) {
   const lat = ns(time(t))
   const limit = 21e6
   if (lat > limit) {
-    log.warn({ ms: (lat / 1e6).toFixed(2) }, 'latency')
+    log.debug({ ms: (lat / 1e6).toFixed(2) }, 'latency')
   }
   return lat
 }
@@ -645,7 +655,7 @@ MangerService.prototype.start = function (cb) {
   const onrequest = (req, res) => {
     log.info({ method: req.method, url: req.url }, 'request')
 
-    function terminate (er, statusCode, payload, time) {
+    const terminate = (er, statusCode, payload, time) => {
       if (er) {
         const payloads = {
           404: () => {
