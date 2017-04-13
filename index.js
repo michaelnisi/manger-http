@@ -26,7 +26,7 @@ function nop () {}
 const shouldMeasure = parseInt(process.env.MANGER_LOG_LEVEL, 10) < 30
 const time = shouldMeasure ? process.hrtime : nop
 const ns = (() => {
-  return debugging ? (t) => {
+  return shouldMeasure ? (t) => {
     return t[0] * 1e9 + t[1]
   } : nop
 })()
