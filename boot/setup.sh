@@ -39,11 +39,14 @@ schedule_updates() {
   fi
 }
 
-echo "Copying files"
-copy
+main() {
+  if [ $(uname -s) == "Darwin" ]; then
+    echo "Hello Mac"
+    exit 0
+  fi
+  copy
+  import_manifest
+  schedule_updats
+}
 
-echo "Importing manifest"
-import_manifest
-
-echo "Scheduling hourly updates"
-schedule_updates
+main

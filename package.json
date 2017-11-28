@@ -6,7 +6,8 @@
   "scripts": {
     "pretest": "standard",
     "test": "tap -b test/*.js",
-    "posttest": "rm -rf /tmp/manger-http-[1-9]*"
+    "posttest": "rm -rf /tmp/manger-http-[1-9]*",
+    "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short"
   },
   "repository": {
     "type": "git",
