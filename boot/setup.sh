@@ -41,7 +41,8 @@ schedule_updates() {
 
 main() {
   if [ $(uname -s) == "Darwin" ]; then
-    echo "Hello Mac"
+    cp ./LaunchAgents/ink.codes.manger-update.plist ~/Library/LaunchAgents
+    launchctl load -w ~/Library/LaunchAgents/ink.codes.manger-update.plist
     exit 0
   fi
   copy
