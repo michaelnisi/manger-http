@@ -41,6 +41,7 @@ schedule_updates() {
 
 main() {
   if [ $(uname -s) == "Darwin" ]; then
+    mkdir ~/Library/LaunchAgents
     cp ./LaunchAgents/ink.codes.manger-update.plist ~/Library/LaunchAgents
     launchctl load -w ~/Library/LaunchAgents/ink.codes.manger-update.plist
     exit 0
