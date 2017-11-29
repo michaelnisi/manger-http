@@ -18,19 +18,18 @@ copy() {
     exit 1
   fi
   mkdir -p $SVC_ROOT
-  cp ./package.json $SVC_ROOT
-  cp ./*.js $SVC_ROOT
-  cp -rf ./node_modules $SVC_ROOT
+  cp "${DIR}/package.json" $SVC_ROOT
+  cp "${DIR}/*.js" $SVC_ROOT
+  cp -rf "${DIR}/node_modules" $SVC_ROOT
 }
 
 import_manifest() {
-  cp ./smf/manifests/manger.xml "$SMF_ROOT"
+  cp "${DIR}/smf/manifests/manger.xml" "$SMF_ROOT"
   svcadm restart manifest-import
   svcadm enable manger
 }
 
 schedule_updates() {
-  # TODO: Set to daily
   local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
   if [ "$( crontab -l | grep -sq localhost/feeds )" ]; then
     echo "** Updates already scheduled"
@@ -41,8 +40,8 @@ schedule_updates() {
 
 main() {
   if [ $(uname -s) == "Darwin" ]; then
-    mkdir ~/Library/LaunchAgents
-    cp ./LaunchAgents/ink.codes.manger-update.plist ~/Library/LaunchAgents
+    mkdir -p ~/Library/LaunchAgents
+    cp "${DIR}/LaunchAgents/ink.codes.manger-update.plist" ~/Library/LaunchAgents
     launchctl load -w ~/Library/LaunchAgents/ink.codes.manger-update.plist
     exit 0
   fi
