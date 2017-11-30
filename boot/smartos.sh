@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+
+SMF_ROOT=/var/svc/manifest/network
+SVC_ROOT=/opt/podest/manger
+
+copy() {
+  if [ -n "$(svcs manger | grep -sq online)" ]; then
+    echo "manger appears to be online"
+    exit 1
+  fi
+  mkdir -p $SVC_ROOT
+  cp "${DIR}/package.json" $SVC_ROOT
+  cp "${DIR}/*.js" $SVC_ROOT
+  cp -rf "${DIR}/node_modules" $SVC_ROOT
+}
+
+import_manifest() {
+  local manifest="${DIR}/../smf/manifests/manger.xml"
+  cp manifest "$SMF_ROOT"
+  svcadm restart manifest-import
+  svcadm enable manger
+}
+
+schedule_updates() {
+  local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
+  if [ "$( crontab -l | grep -sq localhost/feeds )" ]; then
+    echo "** Updates already scheduled"
+  else
+    (crontab -l; echo "$job" ) | crontab
+  fi
+}
+
+smartos() {
+  copy
+  import_manifest
+  schedule_updates
+}

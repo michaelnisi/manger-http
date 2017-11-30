@@ -8,46 +8,23 @@ if [[ -h $SOURCE ]]; then
 fi
 
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
-PROFILE=/root/.bashrc
-SMF_ROOT=/var/svc/manifest/network
-SVC_ROOT=/opt/podest/manger
-
-copy() {
-  if [ -n "$(svcs manger | grep -sq online)" ]; then
-    echo "manger appears to be online"
-    exit 1
-  fi
-  mkdir -p $SVC_ROOT
-  cp "${DIR}/package.json" $SVC_ROOT
-  cp "${DIR}/*.js" $SVC_ROOT
-  cp -rf "${DIR}/node_modules" $SVC_ROOT
-}
-
-import_manifest() {
-  cp "${DIR}/smf/manifests/manger.xml" "$SMF_ROOT"
-  svcadm restart manifest-import
-  svcadm enable manger
-}
-
-schedule_updates() {
-  local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
-  if [ "$( crontab -l | grep -sq localhost/feeds )" ]; then
-    echo "** Updates already scheduled"
-  else
-    (crontab -l; echo "$job" ) | crontab
-  fi
-}
 
 main() {
-  if [ $(uname -s) == "Darwin" ]; then
-    mkdir -p ~/Library/LaunchAgents
-    cp "${DIR}/LaunchAgents/ink.codes.manger-update.plist" ~/Library/LaunchAgents
-    launchctl load -w ~/Library/LaunchAgents/ink.codes.manger-update.plist
-    exit 0
-  fi
-  copy
-  import_manifest
-  schedule_updats
+  local name=$(uname -s)
+  case $name in
+  "Darwin")
+    . "${DIR}/darwin.sh"
+    exit $(darwin)
+    ;;
+  "SunOS")
+    . "${DIR}/smartos.sh"
+    exit $(smartos)
+    ;;
+  *)
+    echo "${name} not supported"
+    exit 1
+    ;;
+  esac
 }
 
 main
