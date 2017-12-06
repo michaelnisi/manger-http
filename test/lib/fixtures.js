@@ -1,4 +1,3 @@
-const common = require('./common')
 const fs = require('fs')
 const http = require('http')
 const path = require('path')
@@ -121,9 +120,8 @@ function test (server, fixtures, t, cb) {
   })
 }
 
-function run (file, t, cb) {
+function run (server, file, t, cb) {
   const fixtures = readSync(file)
-  const server = common.freshMangerServer()
 
   const remoteServer = freshRemoteServer(fixtures, t)
 

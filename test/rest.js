@@ -3,46 +3,36 @@ const fixtures = require('./lib/fixtures')
 const http = require('http')
 const test = require('tap').test
 
-test('root', (t) => {
-  fixtures.run('root.json', t, (er) => {
+function runFixtures (name, t) {
+  const server = common.freshMangerServer()
+  fixtures.run(server, name, t, (er) => {
     if (er) throw er
     t.end()
   })
+}
+
+test('root', (t) => {
+  runFixtures('root.json', t)
 })
 
 test('not found', (t) => {
-  fixtures.run('notfound.json', t, (er) => {
-    if (er) throw er
-    t.end()
-  })
+  runFixtures('notfound.json', t)
 })
 
 test('feed', (t) => {
-  fixtures.run('feed.json', t, (er) => {
-    if (er) throw er
-    t.end()
-  })
+  runFixtures('feed.json', t)
 })
 
 test('feeds', (t) => {
-  fixtures.run('feeds.json', t, (er) => {
-    if (er) throw er
-    t.end()
-  })
+  runFixtures('feeds.json', t)
 })
 
 test('entries', (t) => {
-  fixtures.run('entries.json', t, (er) => {
-    if (er) throw er
-    t.end()
-  })
+  runFixtures('entries.json', t)
 })
 
 test('ranks', (t) => {
-  fixtures.run('ranks.json', t, (er) => {
-    if (er) throw er
-    t.end()
-  })
+  runFixtures('ranks.json', t)
 })
 
 test('abort', (t) => {
