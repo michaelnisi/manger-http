@@ -1,18 +1,17 @@
 // common - common test stuff
 
-exports.freshServer = freshServer
-exports.freshName = freshName
+const server = require('../..')
 
-var server = require('../..')
+exports.freshName = freshName
+exports.freshMangerServer = freshMangerServer
 
 function freshName () {
-  var name = '/tmp/manger-http-'
-  return name + Math.floor(Math.random() * (1 << 24))
+  return `/tmp/manger-http-${Math.floor(Math.random() * (1 << 24))}`
 }
 
-function freshServer () {
-  var opts = {
-    location: freshName(),
+function freshMangerServer () {
+  const opts = {
+    location: this.freshName(),
     port: 1337
   }
   return server(opts)

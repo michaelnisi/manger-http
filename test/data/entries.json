@@ -1,8 +1,7 @@
 [
 {
+  "title": "Not Allowed GET",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/entries"
   },
@@ -15,10 +14,11 @@
   }
 },
 {
+  "title": "POST",
   "remote": [
   {
-    "host": "http://www.newyorker.com",
-    "path": "/feed/posts",
+    "statusCode": 200,
+    "url": "/newyorker",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
@@ -26,8 +26,8 @@
     "file": "newyorker.xml"
   },
   {
-    "host": "http://feeds.feedburner.com",
-    "path": "/thememorypalace",
+    "statusCode": 200,
+    "url": "/thememorypalace",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
@@ -35,14 +35,12 @@
     "file": "thememorypalace.xml"
   }],
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "POST",
     "path": "/entries",
     "payload": [
-      { "url": "http://www.newyorker.com/feed/posts",
+      { "url": "http://localhost:8001/newyorker",
         "since": "04 Aug 2015" },
-      { "url": "http://feeds.feedburner.com/thememorypalace",
+      { "url": "http://localhost:8001/thememorypalace",
         "since": "03 Aug 2015" }
     ]
   },

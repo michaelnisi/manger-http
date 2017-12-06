@@ -1,19 +1,21 @@
 [
 {
+  "title": "GET Empty",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/feeds"
   },
-  "response": [
-  ]
+  "response": {
+    "statusCode": 200,
+    "payload": []
+  }
 },
 {
+  "title": "POST",
   "remote": [
   {
-    "host": "http://www.newyorker.com",
-    "path": "/feed/posts",
+    "statusCode": 200,
+    "url": "/newyorker",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
@@ -21,8 +23,8 @@
     "file": "newyorker.xml"
   },
   {
-    "host": "http://feeds.feedburner.com",
-    "path": "/thememorypalace",
+    "statusCode": 200,
+    "url": "/thememorypalace",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
@@ -30,13 +32,11 @@
     "file": "thememorypalace.xml"
   }],
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "POST",
     "path": "/feeds",
     "payload": [
-      { "url": "http://www.newyorker.com/feed/posts" },
-      { "url": "http://feeds.feedburner.com/thememorypalace" }
+      { "url": "http://localhost:8001/newyorker" },
+      { "url": "http://localhost:8001/thememorypalace" }
     ]
   },
   "response": [
@@ -52,25 +52,15 @@
     "path": "/feeds"
   },
   "response": [
-    "http://feeds.feedburner.com/thememorypalace",
-    "http://www.newyorker.com/feed/posts"
+    "http://localhost:8001/newyorker",
+    "http://localhost:8001/thememorypalace"
   ]
 },
 {
+  "title": "PUT",
   "remote": [
   {
-    "host": "http://www.newyorker.com",
-    "path": "/feed/posts",
-    "headers": {
-      "content-type": "application/json",
-      "ETAG": "55346232-18151"
-    },
-    "method": "HEAD",
-    "statusCode": 304
-  },
-  {
-    "host": "http://feeds.feedburner.com",
-    "path": "/thememorypalace",
+    "url": "/thememorypalace",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18152"
@@ -79,17 +69,25 @@
     "statusCode": 200
   },
   {
-    "host": "http://feeds.feedburner.com",
-    "path": "/thememorypalace",
+    "url": "/thememorypalace",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18152"
     },
-    "file": "thememorypalace.xml"
-  }],
+    "file": "thememorypalace.xml",
+    "statusCode": 200
+  },
+  {
+    "url": "/newyorker",
+    "headers": {
+      "content-type": "application/json",
+      "ETAG": "55346232-18151"
+    },
+    "method": "HEAD",
+    "statusCode": 304
+  }
+  ],
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "PUT",
     "path": "/feeds"
   },

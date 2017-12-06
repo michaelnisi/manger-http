@@ -1,51 +1,52 @@
 [
-{
-  "request": {
-    "host": "localhost",
-    "port": 1337,
-    "method": "DELETE",
-    "path": "/feed/http%3A%2F%2Fwww.newyorker.com%2Ffeed%2Fposts"
-  },
-  "response": {
-    "statusCode": 404,
-    "payload": {
-      "error": "not deleted",
-      "reason": "http://www.newyorker.com/feed/posts not cached"
-    }
-  }
-},
-{
-  "remote": {
-    "host": "http://www.newyorker.com",
-    "path": "/feed/posts",
-    "headers": {
-      "content-type": "application/json",
-      "ETAG": "55346232-18151"
+  {
+    "title": "Failed DELETE",
+    "request": {
+      "method": "DELETE",
+      "path": "/feed/http%3A%2F%2Flocalhost:8001%2Fnewyorker"
     },
-    "file": "newyorker.xml"
+    "response": {
+      "statusCode": 404,
+      "payload": {
+        "error": "not deleted",
+        "reason": "http://localhost:8001/newyorker not cached"
+      }
+    }
   },
-  "request": {
-    "host": "localhost",
-    "port": 1337,
-    "method": "GET",
-    "path": "/feed/http%3A%2F%2Fwww.newyorker.com%2Ffeed%2Fposts"
+  {
+    "title": "GET",
+    "remote": {
+      "statusCode": 200,
+      "url": "/newyorker",
+      "headers": {
+        "content-type": "application/json",
+        "ETAG": "55346232-18151"
+      },
+      "file": "newyorker.xml"
+    },
+    "request": {
+      "path": "/feed/http%3A%2F%2Flocalhost:8001%2Fnewyorker"
+    },
+    "response": {
+      "file": "newyorker.xml",
+      "statusCode": 200,
+      "payload": [
+        { "title": "The New Yorker: Blogs" }
+      ]
+    }
   },
-  "response": [
-  { "title": "The New Yorker: Blogs" }
-  ]
-},{
-  "request": {
-    "host": "localhost",
-    "port": 1337,
-    "method": "DELETE",
-    "path": "/feed/http%3A%2F%2Fwww.newyorker.com%2Ffeed%2Fposts"
-  },
-  "response": {
-    "statusCode": 200,
-    "payload": {
-      "ok": true,
-      "id": "http://www.newyorker.com/feed/posts"
+  {
+    "title": "Successful DELETE",
+    "request": {
+      "method": "DELETE",
+      "path": "/feed/http%3A%2F%2Flocalhost:8001%2Fnewyorker"
+    },
+    "response": {
+      "statusCode": 200,
+      "payload": {
+        "ok": true,
+        "id": "http://localhost:8001/newyorker"
+      }
     }
   }
-}
 ]

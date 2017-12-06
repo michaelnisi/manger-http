@@ -1,8 +1,7 @@
 [
 {
+  "title": "Empty GET",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/ranks"
   },
@@ -10,10 +9,11 @@
   ]
 },
 {
+  "title": "GET",
   "remote": [
   {
-    "host": "http://www.newyorker.com",
-    "path": "/feed/posts",
+    "statusCode": 200,
+    "url": "/newyorker",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
@@ -21,22 +21,21 @@
     "file": "newyorker.xml"
   },
   {
-    "host": "http://feeds.feedburner.com",
-    "path": "/thememorypalace",
+    "statusCode": 200,
+    "url": "/thememorypalace",
     "headers": {
       "content-type": "application/json",
       "ETAG": "55346232-18151"
     },
     "file": "thememorypalace.xml"
-  }],
+  }
+  ],
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "POST",
     "path": "/feeds",
     "payload": [
-      { "url": "http://www.newyorker.com/feed/posts" },
-      { "url": "http://feeds.feedburner.com/thememorypalace" }
+      { "url": "http://localhost:8001/newyorker" },
+      { "url": "http://localhost:8001/thememorypalace" }
     ]
   },
   "response": [
@@ -45,23 +44,20 @@
   ]
 },
 {
+  "title": "POST",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "POST",
     "path": "/entries",
     "payload": [
-      { "url": "http://feeds.feedburner.com/thememorypalace" }
+      { "url": "http://localhost:8001/thememorypalace" }
     ]
   },
   "response": [
-  ],
-  "TODO": "Why do feeds not count?"
+  ]
 },
 {
+  "title": "PUT",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "PUT",
     "path": "/ranks"
   },
@@ -73,21 +69,19 @@
   }
 },
 {
+  "title": "GET",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/ranks"
   },
   "response": [
-    "http://feeds.feedburner.com/thememorypalace",
-    "http://www.newyorker.com/feed/posts"
+    "http://localhost:8001/thememorypalace",
+    "http://localhost:8001/newyorker"
   ]
 },
 {
+  "title": "DELETE",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "DELETE",
     "path": "/ranks"
   },
@@ -99,9 +93,8 @@
   }
 },
 {
+  "title": "GET Post-Deletion",
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/ranks"
   },

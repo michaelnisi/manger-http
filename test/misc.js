@@ -1,10 +1,10 @@
-var mangerHTTP = require('../')
-var test = require('tap').test
-var common = require('./lib/common')
+const mangerHTTP = require('../')
+const test = require('tap').test
+const common = require('./lib/common')
 
-test('constructor', function (t) {
-  var f = mangerHTTP
-  function opts () {
+test('constructor', (t) => {
+  const f = mangerHTTP
+  const opts = () => {
     return {
       location: common.freshName()
     }
@@ -15,34 +15,34 @@ test('constructor', function (t) {
   t.end()
 })
 
-test('factor', function (t) {
-  var f = mangerHTTP.factor
-  var wanted = [
+test('factor', (t) => {
+  const f = mangerHTTP.factor
+  const wanted = [
     1,
     10,
     500,
     500
   ]
-  var found = [
+  const found = [
     f(0),
     f(100),
     f(5000),
     f(10000)
   ]
   t.plan(wanted.length)
-  found.forEach(function (it) {
+  found.forEach((it) => {
     t.is(it, wanted.shift())
   })
 })
 
-test('ok', function (t) {
-  var f = mangerHTTP.ok
-  var wanted = [
+test('ok', (t) => {
+  const f = mangerHTTP.ok
+  const wanted = [
     false,
     false,
     false
   ]
-  var found = [
+  const found = [
     f(undefined),
     f(new Error()),
     f(new Error('hullo'))
@@ -53,12 +53,12 @@ test('ok', function (t) {
     'quaint HTTP status',
     'query error',
     'request error'
-  ].forEach(function (str) {
+  ].forEach((str) => {
     found.push(f(new Error(str)))
     wanted.push(true)
   })
   t.plan(wanted.length)
-  found.forEach(function (it) {
+  found.forEach((it) => {
     t.is(it, wanted.shift())
   })
 })

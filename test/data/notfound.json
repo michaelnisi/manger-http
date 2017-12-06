@@ -1,7 +1,5 @@
 {
   "request": {
-    "host": "localhost",
-    "port": 1337,
     "method": "GET",
     "path": "/hello"
   },
