@@ -101,16 +101,17 @@ const whitelist = RegExp([
   'ECONNRESET',
   'ENOTFOUND',
   'ETIMEDOUT',
-  'recently updated',
+  'certificate'
   'client error',
   'not deleted',
   'parse error',
   'quaint HTTP status',
   'query error',
+  'recently updated',
   'request error',
   'socket hang up',
   'too many redirects',
-  'certificate'
+  'update error: write EPIPE'
 ].join('|'), 'i')
 
 // Assess specified error by its message returning `true`, if it might be OK to
