@@ -101,7 +101,7 @@ const whitelist = RegExp([
   'ECONNRESET',
   'ENOTFOUND',
   'ETIMEDOUT',
-  'certificate'
+  'certificate',
   'client error',
   'not deleted',
   'parse error',
