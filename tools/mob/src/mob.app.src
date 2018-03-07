@@ -17,7 +17,7 @@
   ]},
   {mod, {mob_app, []}},
   {env, [
-    {host, "localhost"},
+    {host, "Manto.local"},
     {port, 8384},
     %% TODO: Use more feeds
     {feeds, "FEEDS"},

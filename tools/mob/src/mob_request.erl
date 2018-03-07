@@ -1,12 +1,20 @@
 -module(mob_request).
--behaviour(gen_fsm).
+-behaviour(gen_statem).
 
--export([code_change/4]).
--export([handle_info/3]).
--export([handle_event/3]).
--export([handle_sync_event/4]).
--export([init/1]).
--export([terminate/3]).
+-export([start_link/1]).
+
+-export([
+  terminate/3,
+  code_change/4,
+  init/1,
+  callback_mode/0
+]).
+
+-export([
+  connecting/3,
+  requesting/3,
+  receiving/3
+]).
 
 -record(state, {
   protocol,
@@ -22,13 +30,10 @@
 
 %% API
 
--export([start_link/1]).
-
-%% This is a perpetual motion machine, it just needs to be started.
 start_link(Opts) ->
-  gen_fsm:start_link(?MODULE, Opts, []).
+  gen_statem:start_link(?MODULE, Opts, []).
 
-%% Callbacks
+%% Mandatory Callbacks
 
 connect(Host, Port) ->
   {ok, ConnPid} = gun:open(Host, Port),
@@ -47,6 +52,13 @@ terminate(_Reason, _StateName, State) ->
   C = State#state.connection,
   gun:shutdown(C).
 
+code_change(_OldVsn, StateName, State, _Extra) ->
+  {ok, StateName, State}.
+
+callback_mode() -> state_functions.
+
+%% State Callbacks
+
 request(State) ->
   C = State#state.connection,
   S = mob_stream:stream(C),
@@ -59,31 +71,20 @@ maybe_cancel(C, S) ->
     _ -> no
   end.
 
-%% TODO: Collect statistics
-%% TODO: Should retry
-handle_info({gun_up, _, _}, _, State) ->
-  request(State);
-handle_info({gun_response, _, _, fin, _, _}, _, State) ->
+connecting(info, {gun_up, _, _}, State) ->
+  request(State).
+
+requesting(info, {gun_response, _, _, fin, _, _}, State) ->
   {next_state, requesting, State};
-handle_info({gun_response, C, S, nofin, _, _}, _, State) ->
+requesting(info, {gun_response, C, S, nofin, _, _}, State) ->
   case maybe_cancel(C, S) of
     ok -> {stop, normal, State};
     _ -> {next_state, receiving, State}
-  end;
-handle_info({gun_data, _, _, nofin, _}, _, State) ->
+  end.
+
+receiving(info, {gun_data, _, _, nofin, _}, State) ->
   {next_state, receiving, State};
-handle_info({gun_data, _, _, fin, _}, _, State) ->
+receiving(info, {gun_data, _, _, fin, _}, State) ->
   Time = rand:uniform(5000) + 1000,
   timer:sleep(Time),
-  request(State);
-handle_info(Message, _StateName, State) ->
-  {stop, Message, State}.
-
-handle_event(_Event, _StateName, State) ->
-  {stop, unhandled_event, State}.
-
-handle_sync_event(_Event, _From, _StateName, State) ->
-  {stop, unhandled_event, State}.
-
-code_change(_OldVsn, StateName, State, _Extra) ->
-  {ok, StateName, State}.
+  request(State).
