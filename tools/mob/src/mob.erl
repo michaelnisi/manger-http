@@ -1,10 +1,5 @@
 %% mob - stress manger-http
 
-%% TODO: Try to be more realistic
-%%
-%% - More connections, less requests
-%% - Little to none updates
-
 -module(mob).
 
 -export([start/0]).

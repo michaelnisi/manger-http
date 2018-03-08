@@ -1,6 +1,6 @@
 {application, mob, [
   {description, "stress manger-http"},
-  {vsn, "0.2.0"},
+  {vsn, "1.0.0"},
   {id, "git"},
   {modules, [
     mob,
@@ -19,7 +19,6 @@
   {env, [
     {host, "Manto.local"},
     {port, 8384},
-    %% TODO: Use more feeds
     {feeds, "FEEDS"},
     {connections, 5}
   ]}
