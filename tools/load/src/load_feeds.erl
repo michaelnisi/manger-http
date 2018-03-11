@@ -1,6 +1,6 @@
-%% mob_feeds - own the feeds ets table
+%% load_feeds - own the feeds ets table
 
--module(mob_feeds).
+-module(load_feeds).
 -behaviour(gen_server).
 
 %% API

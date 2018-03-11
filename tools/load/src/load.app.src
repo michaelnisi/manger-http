@@ -1,0 +1,9 @@
+{application, 'load', [
+	{description, "Stress test manger-http"},
+	{vsn, "0.1.0"},
+	{modules, ['load','load_app','load_feeds','load_stream','load_sup']},
+	{registered, [load_sup, load_feeds]},
+	{applications, [kernel,stdlib,mob,jsx,gun]},
+	{mod, {load_app, []}},
+	{env, []}
+]}.

@@ -1,4 +1,6 @@
--module(mob_stream).
+%% load_stream - requests a random HTTP stream from the manger-http API
+
+-module(load_stream).
 
 -export([stream/1]).
 
@@ -7,12 +9,12 @@ queries(N) ->
 queries(0, Queries) ->
  jsx:encode(Queries);
 queries(N, Queries) ->
-  URL = list_to_binary(mob_feeds:rand()),
+  URL = list_to_binary(load_feeds:rand()),
   Query = #{<<"url">> => URL},
   queries(N-1, [Query|Queries]).
 
 uri_encoded_rand() ->
-  http_uri:encode(mob_feeds:rand()).
+  http_uri:encode(load_feeds:rand()).
 
 stream(root, C) ->
   gun:get(C, "/");
@@ -60,7 +62,7 @@ streams(N) when N < 25 ->
 streams(_) ->
   rand_stream([feeds, entries, feed, entries_of_feed]).
 
-%% Issue random request on the specified Gun connection and return the stream
+%% Issue random request on the specified Gun connection C and return the stream
 %% reference.
 stream(C) ->
   N = rand:uniform(250),
