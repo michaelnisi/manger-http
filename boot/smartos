@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-SMF_ROOT=/var/svc/manifest/network
+SMF_ROOT=/var/svc/manifest/site
 SVC_ROOT=/opt/podest/manger
 
 copy() {
