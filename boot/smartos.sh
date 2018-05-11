@@ -9,14 +9,16 @@ copy() {
     exit 1
   fi
   mkdir -p $SVC_ROOT
-  cp "${DIR}/package.json" $SVC_ROOT
-  cp "${DIR}/*.js" $SVC_ROOT
-  cp -rf "${DIR}/node_modules" $SVC_ROOT
+  cp "${DIR}/../conf.js" $SVC_ROOT
+  cp "${DIR}/../index.js" $SVC_ROOT
+  cp "${DIR}/../package.json" $SVC_ROOT
+  cp "${DIR}/../start.js" $SVC_ROOT
+  cp -rf "${DIR}/../node_modules" $SVC_ROOT
 }
 
 import_manifest() {
   local manifest="${DIR}/../smf/manifests/manger.xml"
-  cp manifest "$SMF_ROOT"
+  cp "$manifest" "$SMF_ROOT"
   svcadm restart manifest-import
   svcadm enable manger
 }

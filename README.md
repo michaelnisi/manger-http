@@ -1,6 +1,6 @@
 # manger-http - cache feeds
 
-**manger-http** is an HTTP/1.1 API for caching RSS feeds.
+**manger-http** is implements an HTTP/1.1 API for caching RSS feeds.
 
 ## API
 
