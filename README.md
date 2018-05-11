@@ -130,7 +130,7 @@ GET /feed/:uri
 
 The response is an `Array()` containing the requested `feed()` or an empty `Array()` if the feed could not be found.
 
-#### Remove a feed from the cache
+#### Removing feeds from the cache
 
 ```
 DELETE /feed/:uri
@@ -147,7 +147,7 @@ or
 - `error` `String()` The error message
 - `reason` `String()` The reason for the error
 
-#### List all cached feeds
+#### Listing all cached feeds
 
 ```
 GET /feeds
@@ -161,7 +161,7 @@ To count the feeds in the store, you could do something like:
 curl -s localhost:8384/feeds | json -ga | wc -l
 ```
 
-#### Selected feeds
+#### Selecting feeds
 
 ```
 POST /feeds
@@ -195,7 +195,7 @@ The response is an `Array()` of `entry()` objects.
 
 ### Updating the cache
 
-#### Update all feeds
+#### Updating all feeds
 
 ```
 /PUT feeds
@@ -219,7 +219,7 @@ For the top-ten you could do:
 curl -s localhost:8384/ranks | json -ga | head
 ```
 
-#### Update the ranks
+#### Updating ranks
 
 Request counts are not updated live, but are kept in memory. This operation flushes these changes and updates the rank index.
 
@@ -227,13 +227,23 @@ Request counts are not updated live, but are kept in memory. This operation flus
 /PUT ranks
 ```
 
-#### Reset ranks
+#### Resetting ranks
 
 Reset ranks by deleting the rank index.
 
 ```
 /DELETE ranks
 ```
+
+## Installing
+
+For development, after `npm install`, to start, simply do:
+
+```
+npm start
+```
+
+The `./boot` directory contains more elaborate stuff for scheduling updates and running in production—on [SmartOS](https://www.joyent.com/smartos).
 
 ## License
 

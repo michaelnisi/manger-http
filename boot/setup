@@ -13,11 +13,11 @@ main() {
   local name=$(uname -s)
   case $name in
   "Darwin")
-    . "${DIR}/darwin.sh"
+    . "${DIR}/darwin"
     exit $(darwin)
     ;;
   "SunOS")
-    . "${DIR}/smartos.sh"
+    . "${DIR}/smartos"
     exit $(smartos)
     ;;
   *)

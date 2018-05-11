@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "3.0.5",
+  "version": "3.0.6",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
@@ -37,7 +37,7 @@
   },
   "devDependencies": {
     "rimraf": "^2.5.4",
-    "standard": "^10.0.3",
+    "standard": "^11.0.1",
     "tap": "^11.0.0"
   },
   "engines": {
