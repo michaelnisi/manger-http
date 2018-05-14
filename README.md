@@ -245,6 +245,12 @@ npm start
 
 The `./boot` directory contains more elaborate stuff for scheduling updates and running in production—on [SmartOS](https://www.joyent.com/smartos).
 
+In production, for some limited, this isn’t Erlang, [dynamic tracing](http://dtrace.org/blogs/dap/2013/10/03/node-js-in-production-runtime-log-snooping/) with [bunyan](https://github.com/trentm/node-bunyan/), install with:
+
+```
+NODE_DTRACE_PROVIDER_REQUIRE=hard npm install`
+```
+
 ## License
 
 [MIT License](https://github.com/michaelnisi/manger-http/blob/master/LICENSE)
