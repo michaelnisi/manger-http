@@ -1,14 +1,14 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
-<service_bundle type='manifest' name='PODpodest:manger'>
+<service_bundle type="manifest" name="podest:manger">
 
   <service
-    name='network/manger'
-    type='service'
-    version='1'>
+    name="network/manger"
+    type="service"
+    version="1">
 
-    <create_default_instance enabled='true' />
+    <create_default_instance enabled="true" />
 
     <single_instance />
 
@@ -29,21 +29,21 @@
     </dependency>
 
     <exec_method
-      type='method'
-      name='start'
-      exec='node --abort-on-uncaught-exception start.js &amp;'
-      timeout_seconds='30'>
+      type="method"
+      name="start"
+      exec="node --abort-on-uncaught-exception start.js &amp;"
+      timeout_seconds="30">
       <method_context working_directory="/opt/podest/manger">
         <method_credential
-          user='root'
-          group='root'
-          privileges='basic,net_privaddr' />
+          user="root"
+          group="root"
+          privileges="basic,net_privaddr" />
         <method_environment>
           <envvar name="PATH"
             value="/opt/local/bin:/usr/bin:/usr/sbin:/bin"/>
           <envvar name="PORT"
             value="80"/>
-          <envvar name="NODE_LOG_LEVEL"
+          <envvar name="MANGER_LOG_LEVEL"
             value="40" />
           <envvar name="LEVEL_DB_LOCATION"
             value="/var/db/manger" />
@@ -58,6 +58,8 @@
       name="stop"
       exec=":kill"
       timeout_seconds="30" />
+
+    <property_group name="application" type="application" />
 
     <template>
       <common_name>
