@@ -248,8 +248,10 @@ The `./boot` directory contains more elaborate stuff for scheduling updates and 
 In production, for some limited, this isn’t Erlang, [dynamic tracing](http://dtrace.org/blogs/dap/2013/10/03/node-js-in-production-runtime-log-snooping/) with [bunyan](https://github.com/trentm/node-bunyan/), install with:
 
 ```
-NODE_DTRACE_PROVIDER_REQUIRE=hard npm install`
+NODE_DTRACE_PROVIDER_REQUIRE=hard npm i
 ```
+
+This prevents [dtrace-provider](https://github.com/chrisa/node-dtrace-provider) from substituting with NOPs.
 
 ## License
 
