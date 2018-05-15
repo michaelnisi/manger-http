@@ -251,7 +251,7 @@ In production, for some limited, this isn’t Erlang, [dynamic tracing](http://d
 NODE_DTRACE_PROVIDER_REQUIRE=hard npm i
 ```
 
-This prevents [dtrace-provider](https://github.com/chrisa/node-dtrace-provider) from substituting with NOPs.
+This prevents [dtrace-provider](https://github.com/chrisa/node-dtrace-provider) installation from silently failing.
 
 ## License
 
