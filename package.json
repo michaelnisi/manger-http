@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "3.0.6",
+  "version": "3.1.0",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
@@ -32,7 +32,7 @@
     "buynan": "^1.8.12",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^6.2.1",
+    "manger": "^6.3.0",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1"
   },
