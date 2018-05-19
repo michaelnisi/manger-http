@@ -3,11 +3,18 @@
 SMF_ROOT=/var/svc/manifest/site
 SVC_ROOT=/opt/podest/manger
 
-copy() {
-  if [ -n $( svcs manger | grep -sq online ) ]; then
-    echo "manger appears to be online"
-    exit 1
+check() {
+  local isOnline=$( svcs manger | grep -ic "online" )
+  if [ $isOnline -eq 1 ]
+  then
+    echo "aborting: manger seems to be online"
+    echo 1
   fi
+  echo 0
+}
+
+
+copy() {
   mkdir -p $SVC_ROOT
   cp "${DIR}/../conf.js" $SVC_ROOT
   cp "${DIR}/../index.js" $SVC_ROOT
@@ -24,15 +31,19 @@ import_manifest() {
 }
 
 schedule_updates() {
-  local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
-  if [ $( crontab -l | grep -sq localhost/feeds ) ]; then
-    echo "** Updates already scheduled"
+  local isScheduled=$( crontab -l | grep -ic "PUT localhost/feeds" )
+  if [ $isScheduled -eq 1 ]
+  then
+    echo "aborting: updates already scheduled"
+    echo 1
   else
+    local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
     (crontab -l; echo "$job" ) | crontab
   fi
 }
 
 smartos() {
+  check
   copy
   import_manifest
   schedule_updates
