@@ -103,11 +103,11 @@ const whitelist = RegExp([
   'ETIMEDOUT',
   'certificate',
   'client error',
+  'currently updating',
   'not deleted',
   'parse error',
   'quaint HTTP status',
   'query error',
-  'recently updated',
   'request error',
   'socket hang up',
   'too many redirects',
@@ -324,7 +324,7 @@ function update (req, res, opts, cb) {
   const locked = typeof then === 'number' ? now - then < limit : false
 
   if (locked) {
-    const er = new Error('update error: recently updated')
+    const er = new Error('locked: currently updating')
     return cb(er, 423, NOT_OK)
   }
 

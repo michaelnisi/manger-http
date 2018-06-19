@@ -1,12 +1,12 @@
 <?xml version="1.0"?>
 <!DOCTYPE service_bundle SYSTEM "/usr/share/lib/xml/dtd/service_bundle.dtd.1">
 
-<service_bundle type="manifest" name="podest:manger">
+<service_bundle type='manifest' name='podest:manger'>
 
   <service
-    name="network/manger"
-    type="service"
-    version="1">
+    name='site/manger'
+    type='service'
+    version='1'>
 
     <create_default_instance enabled="true" />
 
@@ -63,7 +63,7 @@
 
     <template>
       <common_name>
-        <loctext xml:lang="Node">Feed Cache Service</loctext>
+        <loctext xml:lang="Node">Podcast Feed Caching Service</loctext>
       </common_name>
     </template>
 
