@@ -31,14 +31,14 @@
     "bunyan": "^1.8.12",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^6.2.1",
+    "manger": "^6.3.0",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1"
   },
   "devDependencies": {
     "rimraf": "^2.5.4",
     "standard": "^11.0.1",
-    "tap": "^11.0.0"
+    "tap": "^11.1.5"
   },
   "engines": {
     "node": ">=6"
