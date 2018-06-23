@@ -28,7 +28,7 @@ check_cron() {
 }
 
 schedule_updates() {
-  local job="0 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
+  local job="45 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
   (crontab -l; echo "$job" ) | crontab
 }
 
