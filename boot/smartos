@@ -16,6 +16,14 @@ copy() {
   cp -rf "${DIR}/../node_modules" $SVC_ROOT
 }
 
+populate() {
+  local in="${DIR}/../smf/manifests/manger.xml.in"
+  local out="${DIR}/../smf/manifests/manger.xml"
+  sed \
+    -e "s;@@PORT@@;$PORT;g" \
+    $in > $out
+}
+
 import_manifest() {
   local manifest="${DIR}/../smf/manifests/manger.xml"
   cp "$manifest" "$SMF_ROOT"
@@ -35,6 +43,7 @@ schedule_updates() {
 smartos() {
   check || exit 1
   copy
+  populate
   import_manifest
   check_cron || exit 1
   schedule_updates

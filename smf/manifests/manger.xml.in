@@ -42,7 +42,7 @@
           <envvar name="PATH"
             value="/opt/local/bin:/usr/bin:/usr/sbin:/bin"/>
           <envvar name="PORT"
-            value="80"/>
+            value="@@PORT@@"/>
           <envvar name="MANGER_LOG_LEVEL"
             value="40" />
           <envvar name="LEVEL_DB_LOCATION"
