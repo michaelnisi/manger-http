@@ -215,8 +215,8 @@ function crash (er, log) {
 
 // Handles requests for single feeds or entries of single feeds. The purpose
 // of these extra routes is to enhance external caching by using these clearcut
-// GET requests for singular things, which are quire common use cases for
-// our clients.
+// GET requests for singular things, which are quite common use cases with our
+// clients.
 function single (s, req, res, opts, cb) {
   const t = time()
 
@@ -229,9 +229,11 @@ function single (s, req, res, opts, cb) {
       buf += chunk
     }
   }
+
   function onerror (er) {
-    err = new Error(er.message)
+    err = new Error(`${req.url}: ${String(er)}`)
   }
+
   function onend () {
     s.removeListener('end', onend)
     s.removeListener('error', onerror)
@@ -240,6 +242,7 @@ function single (s, req, res, opts, cb) {
 
     if (cb) cb(err, 200, buf, t)
   }
+
   s.on('error', onerror)
   s.on('end', onend)
   s.on('readable', onreadable)
@@ -629,14 +632,11 @@ MangerService.prototype.start = function (cb) {
   }
   log.info(info, 'start')
 
-  // TODO: Refine item validation
-
   const cache = manger(this.location, {
     cacheSize: this.cacheSize,
     isEntry: (entry) => {
       if (entry.enclosure) return true
-      // Just logging the URL, the whole entry seems too much.
-      log.warn(entry.url, 'invalid entry')
+      log.info(entry.url, 'invalid entry')
     },
     isFeed: (feed) => {
       return true
