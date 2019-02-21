@@ -10,12 +10,11 @@ An exemplary response header of this API.
 
 ```
 HTTP/1.1 200 OK
-Cache-Control: must-revalidate, max-age=86400
+Cache-Control: max-age=86400
 Content-Type: application/json; charset=utf-8
-Content-Length: 141
-Latency: 8478003
+Content-Length: 370
 Content-Encoding: gzip
-Date: Sat, 04 Jul 2015 14:08:40 GMT
+Date: Thu, 21 Feb 2019 10:07:26 GMT
 Connection: keep-alive
 ```
 
