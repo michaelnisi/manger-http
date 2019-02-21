@@ -238,6 +238,7 @@ function single (s, req, res, opts, cb) {
     s.removeListener('end', onend)
     s.removeListener('error', onerror)
     s.removeListener('readable', onreadable)
+
     s.resume()
 
     if (cb) cb(err, 200, buf, t)
