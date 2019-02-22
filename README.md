@@ -11,14 +11,16 @@ An exemplary response header of this API.
 ```
 HTTP/1.1 200 OK
 Cache-Control: max-age=86400
+Content-Length: 28502
 Content-Type: application/json; charset=utf-8
-Content-Length: 370
-Content-Encoding: gzip
-Date: Thu, 21 Feb 2019 10:07:26 GMT
+Surrogate-Control: max-age=21600
+Backend-Latency: 25.19
+ETag: "6f56-4rMTzq5+UvI8vHbtRxfpEHr60mc"
+Date: Fri, 22 Feb 2019 15:01:45 GMT
 Connection: keep-alive
 ```
 
-All endpoints respond with JSON payloads and offer gzip encoding.
+All routes respond with JSON payloads and offer gzip encoding. The server supports `If-None-Match` [conditional requests](https://developer.mozilla.org/en-US/docs/Web/HTTP/Conditional_requests) and `HEAD` requests. All responses contain ETag headers. If internal latency exceeds 20 milliseconds, a `Backend-Latency` header is added.
 
 If there is no response payload you get:
 

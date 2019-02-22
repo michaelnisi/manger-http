@@ -1,6 +1,6 @@
 'use strict'
 
-// manger-http - cache feeds
+// manger-http - serve podcast feeds with persistent caching
 
 module.exports = exports = MangerService
 
