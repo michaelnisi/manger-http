@@ -599,6 +599,7 @@ function version () {
   return pkg.version
 }
 
+// Returns options completed with defaults.
 function defaults (opts) {
   opts = opts || Object.create(null)
   opts.location = opts.location || '/tmp/manger-http'
@@ -607,7 +608,7 @@ function defaults (opts) {
   opts.log = (() => {
     if (opts.log) return opts.log
     return {
-      fatal: nop, error: nop, warn: nop, info: nop, debug: nop, trace: nop
+      fatal: debug, error: debug, warn: debug, info: debug, debug: debug, trace: debug
     }
   })()
 
@@ -617,6 +618,7 @@ function defaults (opts) {
   return opts
 }
 
+// Creates a new manger service with options.
 function MangerService (opts) {
   if (!(this instanceof MangerService)) return new MangerService(opts)
 
@@ -632,6 +634,7 @@ function MangerService (opts) {
   mkdirp.sync(this.location)
 }
 
+// Additional request state.
 function ReqOpts (log, manger, params, splat, version) {
   this.log = log
   this.manger = manger
@@ -640,6 +643,7 @@ function ReqOpts (log, manger, params, splat, version) {
   this.version = version
 }
 
+// Handles request and response passing a callback into the route handler.
 MangerService.prototype.handleRequest = function (req, res, cb) {
   if (typeof cb !== 'function') {
     throw new Error('callback required to handle request')
@@ -667,6 +671,7 @@ MangerService.prototype.handleRequest = function (req, res, cb) {
   return route.handler(req, res, opts, cb)
 }
 
+// Debug logs cache hits.
 function hitHandler (qry) {
   this.log.debug(qry, 'hit')
 }
