@@ -236,6 +236,46 @@ Reset ranks by deleting the rank index.
 /DELETE ranks
 ```
 
+## Testing
+
+Of course, there are some unit tests.
+
+```
+$ npm t
+```
+
+You can start the server with npm.
+
+```
+$ npm start
+```
+
+And start tackling it with curl.
+
+```
+$ curl -v localhost:8384/feed/http%3A%2F%2Fscriptnotes.net%2Frss
+```
+
+In `./tools/load` is little Erlang/OTP [app](https://github.com/michaelnisi/mob) for automatic load testing.
+
+```
+$ erl -pa ebin deps/*/ebin
+```
+
+```
+1> load:start().
+ok
+2> load:hit(5).
+[{ok,<0.127.0>},
+ {ok,<0.125.0>},
+ {ok,<0.123.0>},
+ {ok,<0.121.0>},
+ {ok,<0.119.0>}]
+3>
+```
+
+This would hit the server with random requests on five connections. Adjust log levels or run with `NODE_DEBUG=manger-http node start.js` to see what’s going on.
+
 ## Installing
 
 For development, after `npm install`, to start, simply do:

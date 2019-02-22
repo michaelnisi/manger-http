@@ -64,7 +64,7 @@ function getGz (req) {
 
 // Returns true if the client's ETag (sent with If-None-Match) matches tag.
 function isMatching (headers, tag) {
-  debug('headers: %o', headers)
+  debug('incoming headers: %o', headers)
 
   const client = headers['If-None-Match'] || headers['if-none-match']
 
@@ -447,7 +447,7 @@ function update (req, res, opts, cb) {
       s.removeListener('end', onend)
 
       if (count > 0) {
-        const info = { feeds: count, streams: x, latency: latency(t) }
+        const info = { feeds: count, streams: x, ms: latency(t) }
         opts.log.warn(info, 'updated')
       } else if (feedCount > 5 && errors.filter((er) => {
         // If we have received 'ENOTFOUND' for all feeds, we've been trying to
@@ -474,7 +474,11 @@ function update (req, res, opts, cb) {
   })
 }
 
-// Returns latency in milliseconds and warns if above 20 ms.
+// Returns latency in milliseconds and logs if it exceeds 20 ms. Having no
+// control over how long outbound HTTP requests for fetching unknown feeds
+// take, this isn’t a rare occurrence. Trying to differentiate using log
+// levels, warning above one and a half seconds. The goal is to prevent
+// flooding our production logs, which are at level 40 (warn).
 function latency (t, log) {
   if (!Array.isArray(t)) {
     return
@@ -485,8 +489,12 @@ function latency (t, log) {
   if (lat > 2e7) {
     const ms = (lat / 1e6).toFixed(2)
 
-    if (log && typeof log.debug === 'function') {
-      log.warn({ ms: ms }, 'latency')
+    if (log) {
+      if (ms > 1500) {
+        log.warn({ ms: ms }, 'latency')
+      } else {
+        log.info({ ms: ms }, 'latency')
+      }
     }
 
     return ms
