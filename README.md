@@ -256,7 +256,7 @@ And start tackling it with curl.
 $ curl -v localhost:8384/feed/http%3A%2F%2Fscriptnotes.net%2Frss
 ```
 
-In `./tools/load` is little Erlang/OTP [app](https://github.com/michaelnisi/mob) for automatic load testing.
+In `./tools/load`, you find a little Erlang/OTP app for putting some load on the server. It’s based on [mob](https://github.com/michaelnisi/mob) and is good for smoke testing after changes were applied to the system.
 
 ```
 $ erl -pa ebin deps/*/ebin
