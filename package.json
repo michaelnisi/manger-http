@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "3.2.2",
+  "version": "3.2.3",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
@@ -29,6 +29,7 @@
   },
   "dependencies": {
     "bunyan": "^1.8.12",
+    "etag": "^1.8.1",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
     "manger": "^6.4.2",
@@ -38,7 +39,7 @@
   "devDependencies": {
     "rimraf": "^2.5.4",
     "standard": "^11.0.1",
-    "tap": "^11.1.5"
+    "tap": "^12.5.3"
   },
   "engines": {
     "node": ">=6"
