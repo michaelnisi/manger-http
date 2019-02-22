@@ -24,7 +24,7 @@ const debug = debuglog('manger-http')
 
 function nop () {}
 
-/// Returns summed nanoseconds from a [seconds, nanoseconds] tuple Array.
+// Returns summed nanoseconds from a [seconds, nanoseconds] tuple Array.
 function nanoseconds (t) {
   return t[0] * 1e9 + t[1]
 }
