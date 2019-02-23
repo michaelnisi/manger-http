@@ -19,7 +19,7 @@ const url = require('url')
 const zlib = require('zlib')
 const { StringDecoder } = require('string_decoder')
 const { createLogger } = require('./lib/log')
-const { purge, ProxyContent } = require('./lib/proxy')
+const { issue, Purge } = require('./lib/proxy')
 
 function nop () {}
 
@@ -417,8 +417,8 @@ function update (req, res, opts, cb) {
     function ondata (feed) {
       log.debug('updated', feed.url)
 
-      purge(new ProxyContent('/feed', feed.url))
-      purge(new ProxyContent('/entries', feed.url))
+      issue(new Purge('/feed', feed.url))
+      issue(new Purge('/entries', feed.url))
 
       count++
     }
