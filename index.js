@@ -14,12 +14,12 @@ const httpMethods = require('http-methods/method')
 const manger = require('manger')
 const mkdirp = require('mkdirp')
 const path = require('path')
+const proxy = require('./lib/proxy')
 const querystring = require('querystring')
 const url = require('url')
 const zlib = require('zlib')
 const { StringDecoder } = require('string_decoder')
 const { createLogger } = require('./lib/log')
-const { issue, Purge } = require('./lib/proxy')
 
 function nop () {}
 
@@ -417,8 +417,8 @@ function update (req, res, opts, cb) {
     function ondata (feed) {
       log.debug('updated', feed.url)
 
-      issue(new Purge('/feed', feed.url))
-      issue(new Purge('/entries', feed.url))
+      proxy.purgeFeed(feed.url)
+      proxy.purgeEntries(feed.url)
 
       count++
     }
