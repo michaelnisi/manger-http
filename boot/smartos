@@ -21,6 +21,8 @@ populate() {
   local out="${DIR}/../smf/manifests/manger.xml"
   sed \
     -e "s;@@PORT@@;$PORT;g" \
+    -e "s;@@REVERSE_PROXY_HOST@@;$PORT;g" \
+    -e "s;@@REVERSE_PROXY_PORT@@;$PORT;g" \
     $in > $out
 }
 

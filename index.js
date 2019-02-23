@@ -15,18 +15,11 @@ const manger = require('manger')
 const mkdirp = require('mkdirp')
 const path = require('path')
 const querystring = require('querystring')
+const update = require('./lib/update')
 const url = require('url')
 const zlib = require('zlib')
 const { StringDecoder } = require('string_decoder')
-const { createLogger } = require('./lib/log')
-const { purge } = require('./lib/proxy')
-
-function nop () {}
-
-// Returns summed nanoseconds from a [seconds, nanoseconds] tuple Array.
-function nanoseconds (t) {
-  return t[0] * 1e9 + t[1]
-}
+const { crash, latency, ok, createLogger } = require('./lib/meta')
 
 // Returns HTTP headers for content-length, latency, encoding, and etag.
 function headers (len, lat, enc, tag) {
@@ -36,7 +29,7 @@ function headers (len, lat, enc, tag) {
     'Cache-Control': 'max-age=' + 86400,
     'Content-Length': len,
     'Content-Type': 'application/json; charset=utf-8',
-    'Surrogate-Control': 'max-age=' + 21600
+    'Surrogate-Control': 'max-age=' + 604800
   }
 
   if (lat) {
@@ -129,37 +122,6 @@ function respond (req, res, statusCode, payload, time, log) {
   res.on('finish', onfinish)
 }
 
-// Whitelists errors we tolerate without crashing.
-const whitelist = RegExp([
-  'ECONNREFUSED',
-  'ECONNRESET',
-  'ENOTFOUND',
-  'ETIMEDOUT',
-  'certificate',
-  'client error',
-  'currently updating',
-  'not deleted',
-  'parse error',
-  'quaint HTTP status',
-  'query error',
-  'request error',
-  'socket hang up',
-  'too many redirects',
-  'update error: write EPIPE'
-].join('|'), 'i')
-
-// Returns true if the error is on the whitelist.
-function ok (er) {
-  let ok = false
-
-  if (er) {
-    const msg = er.message
-    if (msg) ok = msg.match(whitelist) !== null
-  }
-
-  return ok
-}
-
 // Pipes request, via Queries, into Transform s and applies cb with result.
 function query (s, req, opts, cb) {
   const t = process.hrtime()
@@ -249,11 +211,6 @@ function urlFromParams (params) {
   const str = params.url
 
   return typeof str === 'string' ? unescape(str) : null
-}
-
-function crash (er, log) {
-  if (log && typeof log.fatal === 'function') log.fatal(er)
-  process.nextTick(() => { throw er })
 }
 
 // Handles requests for single feeds or entries of single feeds. The purpose
@@ -362,141 +319,6 @@ function factor (count) {
   return Math.max(Math.min(Math.round(count * 0.1), 500), 1)
 }
 
-const OK = JSON.stringify({ ok: true })
-
-const NOT_OK = JSON.stringify({ ok: false })
-
-// Updates the cache, where `this` is a `MangerService` object.
-function update (req, res, opts, cb) {
-  const now = Date.now()
-  const then = this.updating
-  const limit = opts.maxUpdates
-
-  const locked = typeof then === 'number' ? now - then < limit : false
-
-  if (locked) {
-    const er = new Error('locked: currently updating')
-
-    return cb(er, 423, NOT_OK)
-  }
-
-  // We are using a timestamp, instead of a plain boolean, for our updating flag to
-  // limit the duration, currently one day, of the lock.
-  this.updating = now
-
-  const cache = opts.manger
-  const log = opts.log
-
-  cache.flushCounter((er, feedCount) => {
-    if (er) {
-      const failure = 'not updated'
-      const reason = er.message
-      const error = new Error(`${failure}: ${reason}`)
-      const payload = JSON.stringify({ error: failure, reason: reason })
-
-      this.updating = null
-
-      return cb ? cb(error, 500, payload) : null
-    }
-
-    if (cb) cb(null, 202, OK)
-
-    if (feedCount === 0) {
-      log.warn('empty cache')
-      return (this.updating = null)
-    }
-
-    const t = process.hrtime()
-
-    const feedsPerStream = 64
-    const x = Math.min(Math.ceil(feedCount / feedsPerStream), 16)
-    const s = cache.update(x)
-
-    let count = 0
-
-    function ondata (feed) {
-      log.debug('updated', feed.url)
-
-      purge(feed.url, log)
-
-      count++
-    }
-
-    const errors = []
-
-    function onerror (er) {
-      if (ok(er)) {
-        log.warn({ err: er, url: er.url }, 'update')
-        errors.push(er)
-      } else {
-        const failure = 'update error'
-        const reason = er.message
-        const error = new Error(failure + ': ' + reason)
-
-        crash(error, opts.log)
-      }
-    }
-
-    function onend () {
-      s.removeListener('data', ondata)
-      s.removeListener('error', onerror)
-      s.removeListener('end', onend)
-
-      if (count > 0) {
-        const info = { feeds: count, streams: x, ms: latency(t) }
-        opts.log.warn(info, 'updated')
-      } else if (feedCount > 5 && errors.filter((er) => {
-        // If we have received 'ENOTFOUND' for all feeds, we've been trying to
-        // update, tolerating maximally five of five, we can assume that we
-        // have no outbound Internet connectivity -- although we've just been
-        // counting errors, without relating them to the feeds. To get the
-        // attention of an operator we deliberately opt to crash.
-
-        return er.code === 'ENOTFOUND'
-      }).length >= feedCount) {
-        const er = new Error('no connection')
-
-        return crash(er, opts.log)
-      } else {
-        opts.log.warn('no updates')
-      }
-
-      this.updating = null
-    }
-
-    s.on('data', ondata)
-    s.on('error', onerror)
-    s.on('end', onend)
-  })
-}
-
-// Returns latency in milliseconds and logs if it exceeds 20 ms. Having no
-// control over how long outbound HTTP requests for fetching unknown feeds
-// take, this isn’t a rare occurrence. Trying to differentiate using log
-// levels, warning above one and a half seconds. The goal is to prevent
-// flooding our production logs, which are at level 40 (warn).
-function latency (t, log) {
-  if (!Array.isArray(t)) {
-    return
-  }
-
-  const lat = nanoseconds(process.hrtime(t))
-
-  if (lat > 2e7) {
-    const ms = (lat / 1e6).toFixed(2)
-
-    if (log) {
-      if (ms > 1500) {
-        log.warn({ ms: ms }, 'latency')
-      } else {
-        log.info({ ms: ms }, 'latency')
-      }
-    }
-
-    return ms
-  }
-}
-
 function urls (readable, opts, cb) {
   assert(cb, 'callback required')
 
@@ -568,6 +390,8 @@ function ranks (req, res, opts, cb) {
 
   return urls(s, opts, cb)
 }
+
+const OK = JSON.stringify({ ok: true })
 
 function resetRanks (req, res, opts, cb) {
   cb(null, 202, OK)
@@ -878,6 +702,5 @@ if (process.mainModule.filename.match(/test/) !== null) {
   exports.MangerService = MangerService
   exports.defaults = defaults
   exports.factor = factor
-  exports.nop = nop
   exports.ok = ok
 }
