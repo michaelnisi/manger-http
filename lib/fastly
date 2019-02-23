@@ -1,0 +1,47 @@
+% curl -v -X PURGE -H "Fastly-Soft-Purge:1" https://podest.global.ssl.fastly.net/feed/http%3A%2F%2Fscriptnotes.net%2Frss
+*   Trying 151.101.1.194...
+* TCP_NODELAY set
+* Connected to podest.global.ssl.fastly.net (151.101.1.194) port 443 (#0)
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* Cipher selection: ALL:!EXPORT:!EXPORT40:!EXPORT56:!aNULL:!LOW:!RC4:@STRENGTH
+* successfully set certificate verify locations:
+*   CAfile: /etc/ssl/cert.pem
+  CApath: none
+* TLSv1.2 (OUT), TLS handshake, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Server hello (2):
+* TLSv1.2 (IN), TLS handshake, Certificate (11):
+* TLSv1.2 (IN), TLS handshake, Server key exchange (12):
+* TLSv1.2 (IN), TLS handshake, Server finished (14):
+* TLSv1.2 (OUT), TLS handshake, Client key exchange (16):
+* TLSv1.2 (OUT), TLS change cipher, Client hello (1):
+* TLSv1.2 (OUT), TLS handshake, Finished (20):
+* TLSv1.2 (IN), TLS change cipher, Client hello (1):
+* TLSv1.2 (IN), TLS handshake, Finished (20):
+* SSL connection using TLSv1.2 / ECDHE-RSA-AES128-GCM-SHA256
+* ALPN, server accepted to use http/1.1
+* Server certificate:
+*  subject: C=US; ST=California; L=San Francisco; O=Fastly, Inc.; CN=*.freetls.global.fastly.net
+*  start date: Jan  2 20:48:12 2019 GMT
+*  expire date: Jan  3 20:48:12 2020 GMT
+*  subjectAltName: host "podest.global.ssl.fastly.net" matched cert's "*.global.ssl.fastly.net"
+*  issuer: C=BE; O=GlobalSign nv-sa; CN=GlobalSign CloudSSL CA - SHA256 - G3
+*  SSL certificate verify ok.
+> PURGE /feed/http%3A%2F%2Fscriptnotes.net%2Frss HTTP/1.1
+> Host: podest.global.ssl.fastly.net
+> User-Agent: curl/7.54.0
+> Accept: */*
+> Fastly-Soft-Purge:1
+>
+< HTTP/1.1 200 OK
+< Content-Type: application/json
+< Content-Length: 50
+< Accept-Ranges: bytes
+< Date: Sat, 23 Feb 2019 07:33:17 GMT
+< X-Varnish: 880685410
+< Via: 1.1 varnish
+< Connection: keep-alive
+< X-Served-By: cache-hhn1522-HHN
+<
+{"status": "ok", "id": "1522-1548079606-5551820"}
+* Connection #0 to host podest.global.ssl.fastly.net left intact

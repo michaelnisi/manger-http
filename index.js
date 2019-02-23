@@ -18,9 +18,8 @@ const querystring = require('querystring')
 const url = require('url')
 const zlib = require('zlib')
 const { StringDecoder } = require('string_decoder')
-const { debuglog } = require('util')
-
-const debug = debuglog('manger-http')
+const { createLogger } = require('./lib/log')
+const { purge, ProxyContent } = require('./lib/proxy')
 
 function nop () {}
 
@@ -64,8 +63,6 @@ function getGz (req) {
 
 // Returns true if the client's ETag (sent with If-None-Match) matches tag.
 function isMatching (headers, tag) {
-  debug('incoming headers: %o', headers)
-
   const client = headers['If-None-Match'] || headers['if-none-match']
 
   return client === tag
@@ -420,8 +417,8 @@ function update (req, res, opts, cb) {
     function ondata (feed) {
       log.debug('updated', feed.url)
 
-      // TODO: Here we could PURGE and keep dates for Last-Modified headers
-      // curl -X PURGE -H "Fastly-Soft-Purge:1" http://www.example.com
+      purge(new ProxyContent('/feed', feed.url))
+      purge(new ProxyContent('/entries', feed.url))
 
       count++
     }
@@ -612,14 +609,7 @@ function defaults (opts) {
   opts = opts || Object.create(null)
   opts.location = opts.location || '/tmp/manger-http'
   opts.port = opts.port || 8384
-
-  opts.log = (() => {
-    if (opts.log) return opts.log
-    return {
-      fatal: debug, error: debug, warn: debug, info: debug, debug: debug, trace: debug
-    }
-  })()
-
+  opts.log = createLogger(opts.log)
   opts.ttl = opts.ttl || 1.15741e8
   opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
 
