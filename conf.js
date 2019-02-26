@@ -5,6 +5,9 @@
 const bunyan = require('bunyan')
 const http = require('http')
 
+// Working around https://github.com/nodejs/node/issues/16196
+require('tls').DEFAULT_ECDH_CURVE = 'auto'
+
 function level (l) {
   return [10, 20, 30, 40, 50, 60].includes(l) ? l : null
 }
