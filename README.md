@@ -13,7 +13,7 @@ HTTP/1.1 200 OK
 Cache-Control: max-age=86400
 Content-Length: 28502
 Content-Type: application/json; charset=utf-8
-Surrogate-Control: max-age=21600
+Surrogate-Control: max-age=604800
 Backend-Latency: 25.19
 ETag: "6f56-4rMTzq5+UvI8vHbtRxfpEHr60mc"
 Date: Fri, 22 Feb 2019 15:01:45 GMT
