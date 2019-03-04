@@ -14,7 +14,9 @@ function level (l) {
 
 function log () {
   const l = level(parseInt(process.env.MANGER_LOG_LEVEL, 10))
+
   if (!l) return null
+
   return bunyan.createLogger({
     name: 'manger',
     level: l,
@@ -26,6 +28,7 @@ const MAX_UPDATES = 8.64e7
 
 function maxUpdates () {
   const max = parseInt(process.env.MANGER_MAX_UPDATES, 10)
+
   return isNaN(max) ? MAX_UPDATES : max
 }
 
@@ -39,3 +42,5 @@ exports.port = process.env.PORT
 if (module === require.main) {
   console.log(exports)
 }
+
+exports.secret = process.env.SECRET
