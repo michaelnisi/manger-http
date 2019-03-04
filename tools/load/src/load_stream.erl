@@ -16,6 +16,11 @@ queries(N, Queries) ->
 uri_encoded_rand() ->
   http_uri:encode(load_feeds:rand()).
 
+get_or_head(C, P, 1) ->
+  gun:head(C, P);
+get_or_head(C, P, _) ->
+  gun:get(C, P).
+
 stream(root, C) ->
   gun:get(C, "/");
 stream(cached_feeds, C) ->
@@ -36,7 +41,7 @@ stream(feeds, C) ->
   ], Body);
 stream(feed, C) ->
   P = "/feed/" ++ uri_encoded_rand(),
-  gun:get(C, P);
+  get_or_head(C, P, rand:uniform(2));
 stream(entries_of_feed, C) ->
   P = "/entries/" ++ uri_encoded_rand(),
   gun:get(C, P);
