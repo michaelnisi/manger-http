@@ -42,5 +42,3 @@ exports.port = process.env.PORT
 if (module === require.main) {
   console.log(exports)
 }
-
-exports.secret = process.env.SECRET
