@@ -22,11 +22,14 @@ get_or_head(C, P, _) ->
   gun:get(C, P).
 
 stream(root, C) ->
-  gun:get(C, "/");
+  P = "/",
+  get_or_head(C, P, rand:uniform(2));
 stream(cached_feeds, C) ->
-  gun:get(C, "/feeds");
+  P = "/feeds",
+  get_or_head(C, P, rand:uniform(2));
 stream(ranks, C) ->
-  gun:get(C, "/ranks");
+  P = "/ranks",
+  get_or_head(C, P, rand:uniform(2));
 stream(entries, C) ->
   N = rand:uniform(10),
   Body = queries(N),
@@ -44,7 +47,7 @@ stream(feed, C) ->
   get_or_head(C, P, rand:uniform(2));
 stream(entries_of_feed, C) ->
   P = "/entries/" ++ uri_encoded_rand(),
-  gun:get(C, P);
+  get_or_head(C, P, rand:uniform(2));
 stream(delete, C) ->
   P = "/feed/" ++ uri_encoded_rand(),
   gun:delete(C, P);
