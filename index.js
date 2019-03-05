@@ -21,15 +21,14 @@ const zlib = require('zlib')
 const { StringDecoder } = require('string_decoder')
 const { crash, latency, ok, createLogger } = require('./lib/meta')
 
-// Returns HTTP headers for content-length, latency, encoding, and etag.
-function headers (len, lat, enc, tag) {
-  assert(arguments.length === 4)
-
+// Returns HTTP headers for content-length, latency, encoding, tag, and ttl.
+//
+// Using the same cache-control headers for clients and for reverse proxies.
+function headers (len, lat, enc, tag, ttl = 86400) {
   const headers = {
-    'Cache-Control': 'max-age=' + 86400,
+    'Cache-Control': `max-age=${ttl}`,
     'Content-Length': len,
-    'Content-Type': 'application/json; charset=utf-8',
-    'Surrogate-Control': 'max-age=' + 604800
+    'Content-Type': 'application/json; charset=utf-8'
   }
 
   if (lat) {
@@ -106,7 +105,11 @@ function respond (req, res, statusCode, payload, time, log) {
       if (!res) return
 
       const tag = etag(zipped)
-      const h = headers(zipped.length, latency(time, log), 'gzip', tag)
+
+      // Demanding a max-age of one hour for mutator methods.
+      const ttl = req.method !== 'GET' ? 3600 : undefined
+
+      const h = headers(zipped.length, latency(time, log), 'gzip', tag, ttl)
 
       end(h, zipped, tag)
     })
