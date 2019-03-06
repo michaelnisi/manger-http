@@ -20,7 +20,9 @@ function resolve (file) {
 
 // Adjusts fixture, injecting defaults, etc.
 function normalize (fixture) {
-  fixture.request.method = fixture.request.method || 'GET'
+  const req = fixture.request
+
+  req.method = req.method || 'GET'
 
   let res = fixture.response
 
@@ -30,9 +32,11 @@ function normalize (fixture) {
 
   res.statusCode = res.statusCode || 200
 
+  const ttl = req.method === 'GET' ? 86400 : 3600
+
   res.headers = Object.assign({
-    'cache-control': 'max-age=86400',
-    'surrogate-control': 'max-age=86400',
+    'cache-control': `max-age=${ttl}`,
+    'surrogate-control': `max-age=${ttl}`,
     'connection': 'close',
     'content-type': 'application/json; charset=utf-8'
   }, res.headers || {})
@@ -43,8 +47,6 @@ function normalize (fixture) {
 }
 
 function readSync (file) {
-  debug('reading: %s', file)
-
   const p = resolve(file)
   const input = fs.readFileSync(p)
   const json = JSON.parse(input)
@@ -122,26 +124,16 @@ function test (server, fixtures, t, cb) {
   const opts = httpRequestOpts(f.request)
 
   t.test(f.title, (st) => {
-    debug('requesting: %o', opts)
-
     const req = http.request(opts, (res) => {
-      debug('status codes: ( %s, %s )', res.statusCode, wanted.statusCode)
-
       st.match(res.headers, wanted.headers)
 
       const sc = wanted.statusCode || 200
 
+      debug('status codes: (%s, %s )', res.statusCode, sc)
+
       st.is(res.statusCode, sc, 'should be status code')
 
-      if (req.method === 'HEAD') {
-        res.resume()
-        st.end()
-        test(server, fixtures, t, cb)
-        return
-      }
-
       const body = wanted.payload
-      debug('wanted body: %o', body)
 
       let acc = ''
 
@@ -154,11 +146,16 @@ function test (server, fixtures, t, cb) {
       })
 
       res.on('end', () => {
-        const found = JSON.parse(acc)
+        const unbodied = req.method === 'HEAD' || sc === 304
 
-        debug('comparing: ( %o, %o )', found, body)
+        t.is(unbodied, acc === '', 'should withhold body')
 
-        st.matches(found, body, 'should match payload')
+        if (acc !== '') {
+          const found = JSON.parse(acc)
+
+          st.matches(found, body, 'should match payload')
+        }
+
         st.end()
         test(server, fixtures, t, cb)
       })
@@ -167,6 +164,7 @@ function test (server, fixtures, t, cb) {
     })
 
     const payload = f.request.payload
+
     if (payload) {
       req.write(JSON.stringify(payload))
     }

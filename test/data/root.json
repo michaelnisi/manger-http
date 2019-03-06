@@ -30,7 +30,21 @@
     },
     "response": {
       "headers": {
-        "cache-control": "max-age=86400",
+        "etag": "23-l69LIr5ESl//b1FQSiMt9MiReN8"
+      },
+      "statusCode": 304
+    }
+  },
+  {
+    "request": {
+      "headers": {
+        "If-None-Match": "23-l69LIr5ESl//b1FQSiMt9MiReN8"
+      },
+      "method": "GET",
+      "path": "/"
+    },
+    "response": {
+      "headers": {
         "etag": "23-l69LIr5ESl//b1FQSiMt9MiReN8"
       },
       "statusCode": 304
