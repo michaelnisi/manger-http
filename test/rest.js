@@ -5,6 +5,7 @@ const test = require('tap').test
 
 function runFixtures (name, t) {
   const server = common.freshMangerServer()
+
   fixtures.run(server, name, t, (er) => {
     if (er) throw er
     t.end()
@@ -37,9 +38,12 @@ test('ranks', (t) => {
 
 test('abort', (t) => {
   const server = common.freshMangerServer()
+
   server.start((er) => {
     if (er) throw er
+
     const req = http.get('http://localhost:1337/', () => {})
+
     req.on('error', (er) => {
       t.is(er.code, 'ECONNRESET')
       server.stop((er) => {
@@ -47,6 +51,7 @@ test('abort', (t) => {
         t.end()
       })
     })
+
     process.nextTick(() => {
       req.abort()
     })

@@ -1,23 +1,56 @@
+'use strict'
+
 const fs = require('fs')
 const http = require('http')
 const path = require('path')
+const { debuglog } = require('util')
+
+const debug = debuglog('fixtures')
 
 exports.run = run
 
 function mkArray (obj) {
   if (!obj) return
-  return obj instanceof Array ? obj : [obj]
+  return Array.isArray(obj) ? obj : [obj]
 }
 
 function resolve (file) {
   return path.resolve(__dirname, '..', 'data', file)
 }
 
+// Adjusts fixture, injecting defaults, etc.
+function normalize (fixture) {
+  fixture.request.method = fixture.request.method || 'GET'
+
+  let res = fixture.response
+
+  if (Array.isArray(res)) {
+    res = { payload: res }
+  }
+
+  res.statusCode = res.statusCode || 200
+
+  res.headers = Object.assign({
+    'cache-control': 'max-age=86400',
+    'surrogate-control': 'max-age=86400',
+    'connection': 'close',
+    'content-type': 'application/json; charset=utf-8'
+  }, res.headers || {})
+
+  fixture.response = res
+
+  return fixture
+}
+
 function readSync (file) {
+  debug('reading: %s', file)
+
   const p = resolve(file)
   const input = fs.readFileSync(p)
   const json = JSON.parse(input)
-  return mkArray(json)
+  const fixtures = mkArray(json)
+
+  return fixtures.map(f => { return normalize(f) })
 }
 
 // Returns a fake remote server for Manger to hit. All remote server fixtures
@@ -27,8 +60,8 @@ function readSync (file) {
 function freshRemoteServer (fixture, t) {
   const remotes = fixture.reduce((acc, f) => {
     const r = mkArray(f.remote)
-    if (r instanceof Array) return acc.concat(r)
-    return acc
+
+    return (r instanceof Array) ? acc.concat(r) : acc
   }, [])
 
   if (remotes.length === 0) return
@@ -75,39 +108,61 @@ function freshRemoteServer (fixture, t) {
 function httpRequestOpts (json) {
   let opts = Object.assign(Object.create(null), json)
   opts.port = opts.port || 1337
+
   return opts
 }
 
 function test (server, fixtures, t, cb) {
   const f = fixtures.shift()
-  if (!f) {
-    return setTimeout(() => {
-      cb()
-    }, 1000)
-  }
 
-  const wanted = f.response
+  if (!f) return setTimeout(() => { cb() }, 1000)
+
+  let wanted = f.response
+
   const opts = httpRequestOpts(f.request)
 
   t.test(f.title, (st) => {
+    debug('requesting: %o', opts)
+
     const req = http.request(opts, (res) => {
+      debug('status codes: ( %s, %s )', res.statusCode, wanted.statusCode)
+
+      st.match(res.headers, wanted.headers)
+
       const sc = wanted.statusCode || 200
-      const body = wanted.payload || wanted
 
       st.is(res.statusCode, sc, 'should be status code')
+
+      if (req.method === 'HEAD') {
+        res.resume()
+        st.end()
+        test(server, fixtures, t, cb)
+        return
+      }
+
+      const body = wanted.payload
+      debug('wanted body: %o', body)
+
       let acc = ''
+
       res.on('error', (er) => {
         throw er
       })
+
       res.on('data', (chunk) => {
         acc += chunk
       })
+
       res.on('end', () => {
         const found = JSON.parse(acc)
+
+        debug('comparing: ( %o, %o )', found, body)
+
         st.matches(found, body, 'should match payload')
         st.end()
         test(server, fixtures, t, cb)
       })
+
       res.resume()
     })
 

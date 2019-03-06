@@ -1,12 +1,39 @@
-{
-  "request": {
-    "path": "/"
+[
+  {
+    "request": {
+      "path": "/"
+    },
+    "response": {
+      "statusCode": 200,
+      "payload": {
+        "name": "manger",
+        "version": "3.3.0"
+      }
+    }
   },
-  "response": {
-    "statusCode": 200,
-    "payload": {
-      "name": "manger",
-      "version": "3.3.0"
+  {
+    "request": {
+      "method": "HEAD",
+      "path": "/"
+    },
+    "response": {
+      "statusCode": 200
+    }
+  },
+  {
+    "request": {
+      "headers": {
+        "If-None-Match": "23-l69LIr5ESl//b1FQSiMt9MiReN8"
+      },
+      "method": "HEAD",
+      "path": "/"
+    },
+    "response": {
+      "headers": {
+        "cache-control": "max-age=86400",
+        "etag": "23-l69LIr5ESl//b1FQSiMt9MiReN8"
+      },
+      "statusCode": 304
     }
   }
-}
+]
