@@ -61,7 +61,7 @@ rand_stream(Streams) ->
   lists:nth(N, Streams).
 
 %% Rarely
-streams(N) when N < 5 ->
+streams(N) when N < 3 ->
   rand_stream([update, update_ranks, delete]);
 %% Sometimes
 streams(N) when N < 25 ->
