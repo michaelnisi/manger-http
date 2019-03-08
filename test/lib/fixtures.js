@@ -114,6 +114,8 @@ function httpRequestOpts (json) {
   return opts
 }
 
+// TODO: Wait on 202
+
 function test (server, fixtures, t, cb) {
   const f = fixtures.shift()
 
@@ -156,8 +158,14 @@ function test (server, fixtures, t, cb) {
           st.matches(found, body, 'should match payload')
         }
 
-        st.end()
-        test(server, fixtures, t, cb)
+        // Delaying for non-committal response to make time for IO
+        // before the next test.
+        const delay = sc === 202 ? 500 : 0
+
+        setTimeout(() => {
+          st.end()
+          test(server, fixtures, t, cb)
+        }, delay)
       })
 
       res.resume()
