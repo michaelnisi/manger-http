@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "3.3.0",
+  "version": "3.3.1",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
