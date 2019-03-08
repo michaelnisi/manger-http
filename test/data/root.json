@@ -7,7 +7,7 @@
       "statusCode": 200,
       "payload": {
         "name": "manger",
-        "version": "3.3.1"
+        "version": "3.3.2"
       }
     }
   },
@@ -23,14 +23,14 @@
   {
     "request": {
       "headers": {
-        "If-None-Match": "23-dMdnWHjKZPCC7AaQOWWmTzlP2QU"
+        "If-None-Match": "23-/JxgaMs1E9g3aLXAKI+KoPmqe+M"
       },
       "method": "HEAD",
       "path": "/"
     },
     "response": {
       "headers": {
-        "etag": "23-dMdnWHjKZPCC7AaQOWWmTzlP2QU"
+        "etag": "23-/JxgaMs1E9g3aLXAKI+KoPmqe+M"
       },
       "statusCode": 304
     }
@@ -38,14 +38,14 @@
   {
     "request": {
       "headers": {
-        "If-None-Match": "23-dMdnWHjKZPCC7AaQOWWmTzlP2QU"
+        "If-None-Match": "23-/JxgaMs1E9g3aLXAKI+KoPmqe+M"
       },
       "method": "GET",
       "path": "/"
     },
     "response": {
       "headers": {
-        "etag": "23-dMdnWHjKZPCC7AaQOWWmTzlP2QU"
+        "etag": "23-/JxgaMs1E9g3aLXAKI+KoPmqe+M"
       },
       "statusCode": 304
     }
