@@ -4,7 +4,7 @@ set -o xtrace
 
 SMF_ROOT=/var/svc/manifest/site
 SVC_ROOT=/opt/podest
-SVC_NAME=manger-http
+SVC_NAME=manger
 
 check() {
   return $( svcs "$SVC_NAME" | grep -ic "online"  )
