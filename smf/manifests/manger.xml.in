@@ -49,10 +49,6 @@
             value="/var/db/manger" />
           <envvar name="LEVEL_DB_CACHE_SIZE"
             value="16" />
-          <envvar name="REVERSE_PROXY_HOST"
-            value="@@REVERSE_PROXY_HOST@@" />
-          <envvar name="REVERSE_PROXY_PORT"
-            value="@@REVERSE_PROXY_PORT@@" />
         </method_environment>
       </method_context>
     </exec_method>

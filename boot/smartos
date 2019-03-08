@@ -1,19 +1,26 @@
 #!/usr/bin/env bash
 
+set -o xtrace
+
 SMF_ROOT=/var/svc/manifest/site
-SVC_ROOT=/opt/podest/manger
+SVC_ROOT=/opt/podest
+SVC_NAME=manger-http
 
 check() {
-  return $( svcs manger | grep -ic "online"  )
+  return $( svcs "$SVC_NAME" | grep -ic "online"  )
+}
+
+remove() {
+  rm -rf "$SVC_ROOT/$SVC_NAME"
 }
 
 copy() {
+  local build="$DIR/../$1"
+  if [ ! -f "$build" ]; then
+    return 1
+  fi
   mkdir -p $SVC_ROOT
-  cp "${DIR}/../conf.js" $SVC_ROOT
-  cp "${DIR}/../index.js" $SVC_ROOT
-  cp "${DIR}/../package.json" $SVC_ROOT
-  cp "${DIR}/../start.js" $SVC_ROOT
-  cp -rf "${DIR}/../node_modules" $SVC_ROOT
+  tar jxvf "$1" -C "$SVC_ROOT"
 }
 
 populate() {
@@ -21,8 +28,6 @@ populate() {
   local out="${DIR}/../smf/manifests/manger.xml"
   sed \
     -e "s;@@PORT@@;$PORT;g" \
-    -e "s;@@REVERSE_PROXY_HOST@@;$PORT;g" \
-    -e "s;@@REVERSE_PROXY_PORT@@;$PORT;g" \
     $in > $out
 }
 
@@ -44,9 +49,10 @@ schedule_updates() {
 
 smartos() {
   check || exit 1
+  remove
   copy
   populate
   import_manifest
-  check_cron || exit 1
+  check_cron || exit 0
   schedule_updates
 }
