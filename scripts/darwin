@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+
+set -o xtrace
+
+SOURCE="${BASH_SOURCE[0]}"
+if [[ -h $SOURCE ]]; then
+  SOURCE="$(readlink "$SOURCE")"
+fi
+
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
+install_launch_agent() {
+  mkdir -p ~/Library/LaunchAgents
+  local plist="${DIR}/LaunchAgents/ink.codes.manger-update.plist"
+  cp "$plist"  ~/Library/LaunchAgents
+  launchctl load -w ~/Library/LaunchAgents/ink.codes.manger-update.plist
+}
+
+# Copies the development database to the Desktop.
+backup() {
+  local dir='/tmp'
+  local name='manger-http'
+  local database="${dir}/${name}"
+
+  if [ ! -d "$database" ]; then
+    return 1
+  fi
+
+	local ts=$( date -u "+%Y%m%dT%H%M%SZ")
+  local p="${name}-db-${ts}"
+
+	cd $dir
+  tar -jcf "${HOME}/Desktop/${p}" $name
+}
+
+darwin() {
+  install_launch_agent
+}
+
+$1
