@@ -30,7 +30,7 @@ backup() {
 
   cd $dir
 
-  tar -jcf $tarball $name
+  ${TAR} jcf "${tarball}" "${name}"
 }
 
 check() {
