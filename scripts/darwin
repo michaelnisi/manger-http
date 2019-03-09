@@ -26,11 +26,12 @@ backup() {
     return 1
   fi
 
-	local ts=$( date -u "+%Y%m%dT%H%M%SZ")
-  local p="${name}-db-${ts}"
+  local ts=$( date -u "+%Y%m%dT%H%M%SZ")
+  local tarball="${HOME}/Desktop/${name}-db-${ts}.tar.bz2"
 
-	cd $dir
-  tar -jcf "${HOME}/Desktop/${p}" $name
+  cd $dir
+
+  tar -jcf $tarball $name
 }
 
 darwin() {
