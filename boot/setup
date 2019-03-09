@@ -8,6 +8,7 @@ if [[ -h $SOURCE ]]; then
 fi
 
 DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+BUILD="${DIR}/../${1}"
 
 main() {
   local name=$(uname -s)

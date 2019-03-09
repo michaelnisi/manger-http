@@ -12,6 +12,7 @@
 .eunit
 .nyc_output
 .pid
+build
 deps
 ebin
 elvis

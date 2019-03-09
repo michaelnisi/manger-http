@@ -17,9 +17,7 @@ remove() {
 }
 
 copy() {
-  local build="${DIR}/../${1}"
-
-  if [ ! -f "$build" ]; then
+  if [ ! -f "$BUILD" ]; then
     return 1
   fi
 
