@@ -22,7 +22,7 @@ copy() {
   fi
 
   mkdir -p $SVC_ROOT
-  ${TAR} jxvf "$1" -C "$SVC_ROOT"
+  ${TAR} jxvf "$BUILD" -C "$SVC_ROOT"
 }
 
 populate() {
@@ -41,6 +41,7 @@ import_manifest() {
 
   svcadm restart manifest-import
   svcadm enable manger
+  svcadm clear manger
 }
 
 check_cron() {
