@@ -21,10 +21,10 @@ else
 	TAR	?= tar
 endif
 
-NAME = manger-http
+NAME = manger
 
 RELEASE_TARBALL := $(NAME)-pkg-$(STAMP).tar.bz2
-MANGER_HTTP_BUILD := build/$(NAME)
+MANGER_BUILD := build/$(NAME)
 
 all: build
 
@@ -36,7 +36,7 @@ test: node_modules
 	npm test
 
 build: test
-	mkdir -p $(MANGER_HTTP_BUILD)
+	mkdir -p $(MANGER_BUILD)
 	cp -r \
 		conf.js \
 		index.js \
@@ -44,7 +44,7 @@ build: test
 		node_modules \
 		package.json \
 		start.js \
-		$(MANGER_HTTP_BUILD)
+		$(MANGER_BUILD)
 	(cd build && $(TAR) -jcf $(RELEASE_TARBALL) $(NAME))
 
 .PHONY: clean

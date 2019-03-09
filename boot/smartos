@@ -2,30 +2,35 @@
 
 set -o xtrace
 
-SMF_ROOT=/var/svc/manifest/site
-SVC_ROOT=/opt/podest
-SVC_NAME=manger
+TAR=gtar
+
+SMF_ROOT='/var/svc/manifest/site'
+SVC_NAME='manger'
+SVC_ROOT='/opt/podest'
 
 check() {
   return $( svcs "$SVC_NAME" | grep -ic "online"  )
 }
 
 remove() {
-  rm -rf "$SVC_ROOT/$SVC_NAME"
+  rm -rf "${SVC_ROOT}/${SVC_NAME}"
 }
 
 copy() {
-  local build="$DIR/../$1"
+  local build="${DIR}/../${1}"
+
   if [ ! -f "$build" ]; then
     return 1
   fi
+
   mkdir -p $SVC_ROOT
-  tar jxvf "$1" -C "$SVC_ROOT"
+  ${TAR} jxvf "$1" -C "$SVC_ROOT"
 }
 
 populate() {
   local in="${DIR}/../smf/manifests/manger.xml.in"
   local out="${DIR}/../smf/manifests/manger.xml"
+
   sed \
     -e "s;@@PORT@@;$PORT;g" \
     $in > $out
@@ -33,7 +38,9 @@ populate() {
 
 import_manifest() {
   local manifest="${DIR}/../smf/manifests/manger.xml"
+
   cp "$manifest" "$SMF_ROOT"
+
   svcadm restart manifest-import
   svcadm enable manger
 }
@@ -44,6 +51,7 @@ check_cron() {
 
 schedule_updates() {
   local job="45 * * * * curl -s -X PUT localhost/feeds >/dev/null 2>&1"
+
   (crontab -l; echo "$job" ) | crontab
 }
 
