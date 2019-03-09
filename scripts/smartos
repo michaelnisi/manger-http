@@ -2,11 +2,35 @@
 
 set -o xtrace
 
+SOURCE="${BASH_SOURCE[0]}"
+if [[ -h $SOURCE ]]; then
+  SOURCE="$(readlink "$SOURCE")"
+fi
+
+DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+
 TAR=gtar
 
 SMF_ROOT='/var/svc/manifest/site'
 SVC_NAME='manger'
 SVC_ROOT='/opt/podest'
+
+# Copies the database to the current user’s home directory.
+backup() {
+  local dir='/var/db'
+  local db="${dir}/${NAME}"
+
+  if [ ! -d "$db" ]; then
+    return 1
+  fi
+
+  local ts=$( date -u "+%Y%m%dT%H%M%SZ")
+  local tarball="${HOME}/${NAME}-db-${ts}.tar.bz2"
+
+  cd $dir
+
+  tar -jcf $tarball $name
+}
 
 check() {
   return $( svcs "$SVC_NAME" | grep -ic "online"  )
@@ -54,6 +78,7 @@ schedule_updates() {
   (crontab -l; echo "$job" ) | crontab
 }
 
+# Replaces and starts the service.
 smartos() {
   check || exit 1
   remove
@@ -63,3 +88,5 @@ smartos() {
   check_cron || exit 0
   schedule_updates
 }
+
+$1
