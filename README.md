@@ -278,21 +278,23 @@ This would hit the server with random requests on five connections. Adjust log l
 
 ## Installing
 
-For development, after `npm install`, to start, simply do:
+Clone this repo and `npm install`.
+
+## Operating
+
+To run the server on your local machine you can start **manger-http** with:
 
 ```
-npm start
+$ npm start
 ```
 
-The `./boot` directory contains more elaborate stuff for scheduling updates and running in production—on [SmartOS](https://www.joyent.com/smartos).
+The `./setup` directory contains scripts for scheduling updates and service management on [SmartOS](https://www.joyent.com/smartos).
 
-In production, for some limited, this isn’t Erlang, [dynamic tracing](http://dtrace.org/blogs/dap/2013/10/03/node-js-in-production-runtime-log-snooping/) with [bunyan](https://github.com/trentm/node-bunyan/), install with:
+With the Node Dtrace provider, [Bunyan](https://github.com/trentm/node-bunyan) enables dynamic tracing with [Dtrace](http://dtrace.org). Make sure it gets installed `NODE_DTRACE_PROVIDER_REQUIRE=hard npm i`.
 
 ```
-NODE_DTRACE_PROVIDER_REQUIRE=hard npm i
+$ bunyan -p $(pgrep node)
 ```
-
-This prevents [dtrace-provider](https://github.com/chrisa/node-dtrace-provider) installation from silently failing.
 
 ## License
 
