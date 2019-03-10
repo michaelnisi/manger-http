@@ -13,7 +13,7 @@ HTTP/1.1 200 OK
 Cache-Control: max-age=86400
 Content-Length: 28502
 Content-Type: application/json; charset=utf-8
-Surrogate-Control: max-age=604800
+Surrogate-Control: max-age=86400
 Backend-Latency: 25.19
 ETag: "6f56-4rMTzq5+UvI8vHbtRxfpEHr60mc"
 Date: Fri, 22 Feb 2019 15:01:45 GMT
@@ -35,7 +35,7 @@ Errors are JSON too, for example:
 ```json
 {
   "error": "not found",
-  "reason": "/x is not an endpoint"
+  "reason": "/x is no route"
 }
 ```
 
