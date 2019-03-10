@@ -258,13 +258,9 @@ MangerService.prototype.start = function (cb) {
   })
 
   server.on('clientError', (er, socket) => {
-    //
-    // Logging in the 'close' callback, because I've seen the call stack being
-    // exceeded in bunyan.js, in line 958 at this moment, suggesting a race
-    // condition in the error handler. To circumvent this, we also check if the
-    // socket has been destroyed already, before we try to close it.
-    //
-    socket.once('close', () => { log.warn(er) })
+    // HAProxy default health checking connects and disconnects every two
+    // seconds, producing a heartbeat here, hence the discreet logging.
+    socket.once('close', () => { log.trace(er.message) })
     if (!socket.destroyed) {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
     }
