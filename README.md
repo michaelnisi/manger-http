@@ -290,7 +290,7 @@ $ npm start
 
 The `./setup` directory contains scripts for scheduling updates and service management on [SmartOS](https://www.joyent.com/smartos).
 
-With the Node Dtrace provider, [Bunyan](https://github.com/trentm/node-bunyan) enables dynamic tracing with [Dtrace](http://dtrace.org). Make sure it gets installed `NODE_DTRACE_PROVIDER_REQUIRE=hard npm i`.
+With the Node Dtrace provider, [Bunyan](https://github.com/trentm/node-bunyan) enables dynamic tracing with [DTrace](http://dtrace.org) 🦄. Make sure it actually got installed with `NODE_DTRACE_PROVIDER_REQUIRE=hard npm i`.
 
 ```
 $ bunyan -p $(pgrep node)
