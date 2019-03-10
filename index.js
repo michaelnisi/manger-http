@@ -260,7 +260,7 @@ MangerService.prototype.start = function (cb) {
   server.on('clientError', (er, socket) => {
     // HAProxy default health checking connects and disconnects every two
     // seconds, producing a heartbeat here, hence the discreet logging.
-    socket.once('close', () => { log.trace(er.message) })
+    socket.once('close', () => { log.trace('heartbeat') })
     if (!socket.destroyed) {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
     }
