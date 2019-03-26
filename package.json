@@ -28,11 +28,12 @@
     "test": "test"
   },
   "dependencies": {
+    "binary-split": "^1.0.5",
     "bunyan": "^1.8.12",
     "etag": "^1.8.1",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^6.4.4",
+    "manger": "^6.4.5",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1"
   },
