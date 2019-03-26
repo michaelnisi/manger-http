@@ -290,6 +290,18 @@ $ npm start
 
 The `./setup` directory contains scripts for scheduling updates and service management on [SmartOS](https://www.joyent.com/smartos).
 
+Please use `make` to build on SmartOS.
+
+```
+$ make
+```
+
+Before setting up with an HTTP server listening on port 80, for example.
+
+```
+$ PORT=80 ./setup/setup build/manger-pkg-master-20190326T112831Z-g82fe664.tar.bz2
+```
+
 With the Node Dtrace provider, [Bunyan](https://github.com/trentm/node-bunyan) enables dynamic tracing with [DTrace](http://dtrace.org) 🦄. Make sure it actually got installed with `NODE_DTRACE_PROVIDER_REQUIRE=hard npm i`.
 
 ```
