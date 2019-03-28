@@ -8,6 +8,7 @@ const HttpHash = require('http-hash')
 const fs = require('fs')
 const http = require('http')
 const httpMethods = require('http-methods/method')
+const https = require('https')
 const manger = require('manger')
 const mkdirp = require('mkdirp')
 const path = require('path')
@@ -46,8 +47,18 @@ function defaults (opts) {
   opts.log = createLogger(opts.log)
   opts.ttl = opts.ttl || 1.15741e8
   opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
+  opts.maxSockets = opts.maxSockets || 30
 
   return opts
+}
+
+function configureHttpAgents (opts) {
+  const { log, maxSockets } = opts
+  http.globalAgent.maxSockets = maxSockets
+  https.globalAgent.maxSockets = maxSockets
+
+  log.trace(http.globalAgent, 'http')
+  log.trace(https.globalAgent, 'https')
 }
 
 // Creates a new manger service with options.
@@ -56,6 +67,8 @@ function MangerService (opts) {
 
   opts = defaults(opts)
   Object.assign(this, opts)
+
+  configureHttpAgents(opts)
 
   this.hash = HttpHash()
   this.version = version()
@@ -172,8 +185,7 @@ MangerService.prototype.start = function (cb) {
   const info = {
     version: this.version,
     location: this.location,
-    cacheSize: this.cacheSize,
-    maxUpdates: this.maxUpdates
+    maxSockets: this.maxSockets
   }
 
   log.info(info, 'start')
@@ -182,7 +194,7 @@ MangerService.prototype.start = function (cb) {
     cacheSize: this.cacheSize,
     isEntry: (entry) => {
       if (entry.enclosure) return true
-      log.info(entry.url, 'invalid entry')
+      log.trace(entry.url, 'invalid entry')
     },
     isFeed: (feed) => {
       return true
@@ -248,12 +260,7 @@ MangerService.prototype.start = function (cb) {
   const port = this.port
 
   server.listen(port, (er) => {
-    const info = {
-      port: port,
-      sockets: http.globalAgent.maxSockets
-    }
-
-    log.info(info, 'listen')
+    log.info('listening: %s', port)
     if (cb) cb(er)
   })
 
@@ -267,6 +274,8 @@ MangerService.prototype.start = function (cb) {
   })
 
   this.server = server
+
+  log.trace(this, 'started')
 }
 
 // Warning: Tests only! Restarting is undefined.

@@ -37,7 +37,7 @@ function normalize (fixture) {
   res.headers = Object.assign({
     'cache-control': `max-age=${ttl}`,
     'surrogate-control': `max-age=${ttl}`,
-    'connection': 'close',
+    'connection': 'keep-alive',
     'content-type': 'application/json; charset=utf-8'
   }, res.headers || {})
 
