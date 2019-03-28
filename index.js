@@ -44,7 +44,6 @@ function defaults (opts) {
   opts.location = opts.location || '/tmp/manger-http'
   opts.port = opts.port || 8384
   opts.log = createLogger(opts.log)
-  opts.ttl = opts.ttl || 1.15741e8
   opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
 
   return opts
@@ -171,7 +170,8 @@ MangerService.prototype.start = function (cb) {
 
   const info = {
     version: this.version,
-    location: this.location
+    location: this.location,
+    cacheSize: this.cacheSize
   }
 
   log.info(info, 'start')
