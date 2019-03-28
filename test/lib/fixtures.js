@@ -19,6 +19,10 @@ function resolve (file) {
 }
 
 // Adjusts fixture, injecting defaults, etc.
+//
+// Mixing outbound and inbound like this is very confusing. These sloppy
+// pattern matching tests are dangerous, for they are indicating a false
+// impression of safety.
 function normalize (fixture) {
   const req = fixture.request
 
@@ -36,8 +40,7 @@ function normalize (fixture) {
 
   res.headers = Object.assign({
     'cache-control': `max-age=${ttl}`,
-    'surrogate-control': `max-age=${ttl}`,
-    'connection': 'keep-alive',
+    'connection': 'close',
     'content-type': 'application/json; charset=utf-8'
   }, res.headers || {})
 
@@ -85,6 +88,7 @@ function freshRemoteServer (fixture, t) {
 
       if (f.file) {
         const p = resolve(f.file)
+
         t.comment(`streaming: ${p}`)
         fs.createReadStream(p).pipe(res)
       } else {
@@ -95,6 +99,7 @@ function freshRemoteServer (fixture, t) {
 
   const server = http.createServer((req, res) => {
     const f = fixtures.shift()
+
     f(req, res)
   })
 
