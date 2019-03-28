@@ -3,7 +3,6 @@
 // config - configure manger-http
 
 const bunyan = require('bunyan')
-const http = require('http')
 
 // Working around https://github.com/nodejs/node/issues/16196
 require('tls').DEFAULT_ECDH_CURVE = 'auto'
@@ -35,7 +34,7 @@ function maxUpdates () {
 exports.cacheSize = process.env.LEVEL_DB_CACHE_SIZE
 exports.location = process.env.LEVEL_DB_LOCATION
 exports.log = log()
-exports.maxSockets = http.globalAgent.maxSockets = 4096
+exports.maxSockets = 30
 exports.maxUpdates = maxUpdates()
 exports.port = process.env.PORT
 
