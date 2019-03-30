@@ -34,6 +34,7 @@ backup() {
 }
 
 check() {
+  command -v svcs >/dev/null 2>&1 || return 1
   return $( svcs "$SVC_NAME" | grep -ic "online"  )
 }
 
@@ -90,4 +91,6 @@ smartos() {
   schedule_updates
 }
 
-$1
+if [ ! -f "$BUILD" ]; then
+  $1
+fi
