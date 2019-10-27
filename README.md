@@ -259,7 +259,7 @@ $ curl -v localhost:8384/feed/http%3A%2F%2Fscriptnotes.net%2Frss
 In `./tools/load`, you find a little Erlang/OTP app for putting some load on the server. It’s based on [mob](https://github.com/michaelnisi/mob) and is good for smoke testing after changes were applied to the system.
 
 ```
-$ erl -pa ebin deps/*/ebin
+$ PORT=8080 erl -pa ebin deps/*/ebin
 ```
 
 ```

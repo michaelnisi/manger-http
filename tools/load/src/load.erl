@@ -8,7 +8,14 @@
   hit/1
 ]).
 
+env(false) ->
+  no_port_in_enviroment;
+env(Port) ->
+  P = list_to_integer(Port),
+  application:set_env(mob, port, P).
+
 start() ->
+  ok = env(os:getenv("PORT")),
   {ok, _} = application:ensure_all_started(mob),
   {ok, _} = application:ensure_all_started(jsx),
   application:start(?MODULE).
