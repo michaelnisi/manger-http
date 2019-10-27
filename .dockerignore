@@ -1,13 +1,3 @@
-Dockerfile
-LICENSE
-Makefile
-README.md
 node_modules
 npm-debug.log
-setup
-smf
-test
 tools
-
-hidden.env
-.terraform
