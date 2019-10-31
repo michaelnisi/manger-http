@@ -126,6 +126,7 @@ MangerService.prototype.setRoutes = function () {
     if (handler && typeof handler === 'object') {
       handler = httpMethods(handler)
     }
+    
     hash.set(name, handler)
   }
 
@@ -251,8 +252,8 @@ MangerService.prototype.start = function (cb) {
   })
 
   server.on('clientError', (er, socket) => {
-    // HAProxy default health checking connects and disconnects every two
-    // seconds, producing a heartbeat here, hence the discreet logging.
+    // Reverse proxy default health checking connects and disconnects every
+    // couple of seconds, producing a heartbeat here, hence the discreet logging.
     socket.once('close', () => { log.trace('heartbeat') })
     if (!socket.destroyed) {
       socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
@@ -262,46 +263,4 @@ MangerService.prototype.start = function (cb) {
   this.server = server
 
   log.trace(this, 'started')
-}
-
-// Warning: Tests only! Restarting is undefined.
-MangerService.prototype.stop = function (cb) {
-  const closeServer = () => {
-    const server = this.server
-
-    server ? server.close(next) : next()
-  }
-
-  const closeDB = () => {
-    const db = this.manger ? this.manger.db : null
-
-    db ? db.close(next) : next()
-  }
-
-  const tasks = [closeServer, closeDB]
-
-  const next = (er) => {
-    if (er) {
-      const error = new Error('stop error: ' + er.message)
-
-      this.log.warn(error)
-    }
-
-    const f = tasks.shift()
-
-    if (f) {
-      f()
-    } else {
-      this.manger.removeAllListeners()
-      if (cb) cb()
-    }
-  }
-
-  next()
-}
-
-if (process.mainModule.filename.match(/test/) !== null) {
-  exports.MangerService = MangerService
-  exports.defaults = defaults
-  exports.ok = ok
 }
