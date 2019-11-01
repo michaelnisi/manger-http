@@ -1,12 +1,10 @@
 {
   "name": "manger-http",
-  "version": "3.3.4",
+  "version": "4.0.0",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
-    "pretest": "standard",
-    "test": "tap test/*.js -b --cov",
-    "posttest": "rm -rf /tmp/manger-http-[1-9]*",
+    "test": "standard --fix",
     "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short"
   },
   "repository": {
@@ -24,26 +22,20 @@
     "url": "https://github.com/michaelnisi/manger-http/issues"
   },
   "homepage": "https://github.com/michaelnisi/manger-http",
-  "directories": {
-    "test": "test"
-  },
   "dependencies": {
     "binary-split": "^1.0.5",
     "bunyan": "^1.8.12",
     "etag": "^1.8.1",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^6.4.9",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1"
   },
   "devDependencies": {
-    "rimraf": "^2.5.4",
-    "standard": "^11.0.1",
-    "tap": "^12.5.3"
+    "standard": "^11.0.1"
   },
   "engines": {
-    "node": ">=6"
+    "node": "8.16.0"
   },
-  "author": "Michael Nisi <michael.nisi@gmail.com> (http://troubled.pro/)"
+  "author": "Michael Nisi (http://troubled.pro/)"
 }
