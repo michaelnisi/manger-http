@@ -126,7 +126,7 @@ MangerService.prototype.setRoutes = function () {
     if (handler && typeof handler === 'object') {
       handler = httpMethods(handler)
     }
-    
+
     hash.set(name, handler)
   }
 
