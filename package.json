@@ -28,9 +28,9 @@
     "etag": "^1.8.1",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
-    "manger": "^7.0.0",
     "mkdirp": "^0.5.1",
-    "negotiator": "^0.6.1"
+    "negotiator": "^0.6.1",
+    "readable-stream": "^3.4.0"
   },
   "devDependencies": {
     "standard": "^11.0.1"
