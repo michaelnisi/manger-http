@@ -1,4 +1,4 @@
-FROM node:8.16
+FROM node:8.16.2-jessie
 
 ENV PORT 8080
 WORKDIR /usr/src/app
