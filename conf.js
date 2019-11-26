@@ -5,6 +5,7 @@
 const bunyan = require('bunyan')
 
 // Working around https://github.com/nodejs/node/issues/16196
+// @ts-ignore
 require('tls').DEFAULT_ECDH_CURVE = 'auto'
 
 function level (l) {
@@ -31,11 +32,11 @@ function maxUpdates () {
   return isNaN(max) ? MAX_UPDATES : max
 }
 
-exports.cacheSize = process.env.LEVEL_DB_CACHE_SIZE
+exports.cacheSize = Number(process.env.LEVEL_DB_CACHE_SIZE)
 exports.location = process.env.LEVEL_DB_LOCATION
 exports.log = log()
 exports.maxUpdates = maxUpdates()
-exports.port = process.env.PORT
+exports.port = parseInt(process.env.PORT, 10)
 
 if (module === require.main) {
   console.log(exports)

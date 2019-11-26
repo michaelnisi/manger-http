@@ -1,6 +1,6 @@
 {
   "name": "manger-http",
-  "version": "4.0.1",
+  "version": "5.0.0",
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
@@ -36,7 +36,7 @@
     "standard": "^11.0.1"
   },
   "engines": {
-    "node": "8.16.0"
+    "node": ">=10"
   },
   "author": "Michael Nisi (http://troubled.pro/)"
 }

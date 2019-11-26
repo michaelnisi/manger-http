@@ -1,6 +1,6 @@
-'use strict'
-
 // manger-http - serve podcast feeds with persistent caching
+
+'use strict'
 
 module.exports = exports = MangerService
 
@@ -8,7 +8,7 @@ const HttpHash = require('http-hash')
 const fs = require('fs')
 const http = require('http')
 const httpMethods = require('http-methods/method')
-const manger = require('manger')
+const { Manger, createLevelDB } = require('manger')
 const mkdirp = require('mkdirp')
 const path = require('path')
 const update = require('./lib/update')
@@ -29,7 +29,11 @@ const {
   root
 } = require('./lib/routes')
 
-// Returns the version of the containing package.
+/**
+ * Returns the version of the containing package.
+ *
+ * @returns string The version of this service.
+ */
 function version () {
   const p = path.join(__dirname, 'package.json')
   const data = fs.readFileSync(p)
@@ -38,23 +42,18 @@ function version () {
   return pkg.version
 }
 
-// Returns options completed with defaults.
-function defaults (opts) {
-  opts = opts || Object.create(null)
-  opts.location = opts.location || '/tmp/manger-http'
-  opts.port = opts.port || 8384
-  opts.log = createLogger(opts.log)
-  opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
+/**
+ * Creates a new Manger Service.
+ *
+ * @param {{location: string, port: number, log, cacheSize: number}}
+ */
+function MangerService ({location, port, log, cacheSize}) {
+  if (!(this instanceof MangerService)) throw Error('use new')
 
-  return opts
-}
-
-// Creates a new manger service with options.
-function MangerService (opts) {
-  if (!(this instanceof MangerService)) return new MangerService(opts)
-
-  opts = defaults(opts)
-  Object.assign(this, opts)
+  this.location = location || '/tmp/manger-http'
+  this.port = port || 8384
+  this.log = createLogger(log)
+  this.cacheSize = cacheSize || 16 * 1024 * 1024
 
   this.hash = HttpHash()
   this.version = version()
@@ -126,7 +125,7 @@ MangerService.prototype.setRoutes = function () {
     if (handler && typeof handler === 'object') {
       handler = httpMethods(handler)
     }
-    
+
     hash.set(name, handler)
   }
 
@@ -175,10 +174,10 @@ MangerService.prototype.start = function (cb) {
     cacheSize: this.cacheSize
   }
 
-  log.info(info, 'start')
+  log.info(info, 'starting')
 
-  const cache = manger(this.location, {
-    cacheSize: this.cacheSize,
+  const db = createLevelDB(this.location, this.cacheSize)
+  const cache = new Manger(db, {
     isEntry: (entry) => {
       if (entry.enclosure) return true
       log.trace(entry.url, 'invalid entry')
