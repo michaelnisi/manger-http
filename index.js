@@ -1,8 +1,7 @@
 // manger-http - serve podcast feeds with persistent caching
+// @ts-check
 
 'use strict'
-
-module.exports = exports = MangerService
 
 const HttpHash = require('http-hash')
 const fs = require('fs')
@@ -37,34 +36,20 @@ const {
 function version () {
   const p = path.join(__dirname, 'package.json')
   const data = fs.readFileSync(p)
-  const pkg = JSON.parse(data)
+  const pkg = JSON.parse(data.toString())
 
   return pkg.version
 }
 
 /**
- * Creates a new Manger Service.
+ * Additional request state.
  *
- * @param {{location: string, port: number, log, cacheSize: number}}
+ * @param {*} log
+ * @param {*} manger
+ * @param {*} params
+ * @param {*} splat
+ * @param {*} version
  */
-function MangerService ({location, port, log, cacheSize}) {
-  if (!(this instanceof MangerService)) throw Error('use new')
-
-  this.location = location || '/tmp/manger-http'
-  this.port = port || 8384
-  this.log = createLogger(log)
-  this.cacheSize = cacheSize || 16 * 1024 * 1024
-
-  this.hash = HttpHash()
-  this.version = version()
-
-  this.manger = null
-  this.server = null
-
-  mkdirp.sync(this.location)
-}
-
-// Additional request state.
 function ReqOpts (log, manger, params, splat, version) {
   this.log = log
   this.manger = manger
@@ -73,35 +58,11 @@ function ReqOpts (log, manger, params, splat, version) {
   this.version = version
 }
 
-// Handles request and response passing a callback into the route handler.
-MangerService.prototype.handleRequest = function (req, res, cb) {
-  if (typeof cb !== 'function') {
-    throw new Error('callback required to handle request')
-  }
-
-  const pathname = url.parse(req.url).pathname
-
-  const route = this.hash.get(pathname)
-
-  if (route.handler === null) {
-    const er = new Error('not found')
-    er.statusCode = 404
-
-    return cb ? cb(er) : null
-  }
-
-  const opts = new ReqOpts(
-    this.log,
-    this.manger,
-    route.params,
-    route.splat,
-    this.version
-  )
-
-  return route.handler(req, res, opts, cb)
-}
-
-// Debug logs cache hits.
+/**
+ * Debug logs cache hits.
+ *
+ * @param {*} qry
+ */
 function hitHandler (qry) {
   this.log.debug(qry, 'hit')
 }
@@ -118,148 +79,211 @@ function errorHandler (er) {
   }
 }
 
-MangerService.prototype.setRoutes = function () {
-  const hash = this.hash
+class MangerServiceError extends Error {
+  constructor (message, statusCode) {
+    super(message)
 
-  function set (name, handler) {
-    if (handler && typeof handler === 'object') {
-      handler = httpMethods(handler)
-    }
+    this.statusCode = statusCode
 
-    hash.set(name, handler)
+    Error.captureStackTrace(this, this.constructor)
   }
-
-  set('/', {
-    GET: root,
-    HEAD: root
-  })
-
-  set('/entries', {
-    HEAD: entries,
-    POST: entries
-  })
-
-  set('/entries/:url', {
-    GET: entriesOfFeed,
-    HEAD: entriesOfFeed
-  })
-
-  set('/feeds', {
-    GET: list,
-    HEAD: list,
-    POST: feeds,
-    PUT: update.bind(this)
-  })
-
-  set('/feed/:url', {
-    DELETE: deleteFeed,
-    GET: feed,
-    HEAD: feed
-  })
-
-  set('/ranks', {
-    DELETE: resetRanks,
-    GET: ranks,
-    HEAD: ranks,
-    PUT: flushCounter
-  })
 }
 
-MangerService.prototype.start = function (cb) {
-  const log = this.log
+class MangerService {
+  /**
+   * Creates a new Manger Service.
+   *
+   * @param {{location: string, port: number, log, cacheSize: number}}
+   */
+  constructor ({ location, port, log, cacheSize }) {
+    this.location = location || '/tmp/manger-http'
+    this.port = port || 8384
+    this.log = createLogger(log)
+    this.cacheSize = cacheSize || 16 * 1024 * 1024
 
-  const info = {
-    version: this.version,
-    location: this.location,
-    cacheSize: this.cacheSize
+    this.hash = HttpHash()
+    this.version = version()
+
+    this.manger = null
+    this.server = null
+
+    mkdirp.sync(this.location)
   }
 
-  log.info(info, 'starting')
-
-  const db = createLevelDB(this.location, this.cacheSize)
-  const cache = new Manger(db, {
-    isEntry: (entry) => {
-      if (entry.enclosure) return true
-      log.trace(entry.url, 'invalid entry')
-    },
-    isFeed: (feed) => {
-      return true
+  /**
+   * Handles request and response passing a callback into the route handler.
+   */
+  handleRequest (req, res, cb) {
+    if (typeof cb !== 'function') {
+      throw new Error('callback required to handle request')
     }
-  })
 
-  this.errorHandler = errorHandler.bind(this)
+    const pathname = url.parse(req.url).pathname
 
-  cache.on('error', this.errorHandler)
+    const route = this.hash.get(pathname)
 
-  this.hitHandler = hitHandler.bind(this)
+    if (route.handler === null) {
+      const er = new MangerServiceError('not found', 404)
 
-  cache.on('hit', this.hitHandler)
+      return cb ? cb(er) : null
+    }
 
-  this.manger = cache
+    const opts = new ReqOpts(
+      this.log,
+      this.manger,
+      route.params,
+      route.splat,
+      this.version
+    )
 
-  this.setRoutes()
+    return route.handler(req, res, opts, cb)
+  }
 
-  const onrequest = (req, res) => {
-    log.info({ method: req.method, url: req.url }, 'request')
+  setRoutes () {
+    const hash = this.hash
 
-    const terminate = (er, statusCode, payload, time) => {
-      if (er) {
-        const payloads = {
-          404: () => {
-            log.warn({ method: req.method, url: req.url }, 'no route')
-            const reason = req.url + ' is no route'
-            statusCode = 404
-            payload = JSON.stringify({
-              error: 'not found',
-              reason: reason
-            })
-          },
-          405: () => {
-            log.warn({ method: req.method, url: req.url }, 'not allowed')
-            const reason = req.method + ' ' + req.url + ' is undefined'
-            statusCode = 405
-            payload = JSON.stringify({
-              error: 'method not allowed',
-              reason: reason
-            })
-          }
-        }
-        if (er.statusCode in payloads) {
-          payloads[er.statusCode]()
-        } else if (ok(er)) {
-          if (!payload) {
-            return crash(er, log)
-          }
-          log.warn(er)
-        } else {
-          return crash(er, log)
-        }
+    function set (name, handler) {
+      if (handler && typeof handler === 'object') {
+        handler = httpMethods(handler)
       }
 
-      respond(req, res, statusCode, payload, time, log)
+      hash.set(name, handler)
     }
 
-    this.handleRequest(req, res, terminate)
+    set('/', {
+      GET: root,
+      HEAD: root
+    })
+
+    set('/entries', {
+      HEAD: entries,
+      POST: entries
+    })
+
+    set('/entries/:url', {
+      GET: entriesOfFeed,
+      HEAD: entriesOfFeed
+    })
+
+    set('/feeds', {
+      GET: list,
+      HEAD: list,
+      POST: feeds,
+      PUT: update.bind(this)
+    })
+
+    set('/feed/:url', {
+      DELETE: deleteFeed,
+      GET: feed,
+      HEAD: feed
+    })
+
+    set('/ranks', {
+      DELETE: resetRanks,
+      GET: ranks,
+      HEAD: ranks,
+      PUT: flushCounter
+    })
   }
 
-  const server = http.createServer(onrequest)
-  const port = this.port
+  start (cb) {
+    const log = this.log
 
-  server.listen(port, (er) => {
-    log.info('listening: %s', port)
-    if (cb) cb(er)
-  })
-
-  server.on('clientError', (er, socket) => {
-    // Reverse proxy default health checking connects and disconnects every
-    // couple of seconds, producing a heartbeat here, hence the discreet logging.
-    socket.once('close', () => { log.trace('heartbeat') })
-    if (!socket.destroyed) {
-      socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
+    const info = {
+      version: this.version,
+      location: this.location,
+      cacheSize: this.cacheSize
     }
-  })
 
-  this.server = server
+    log.info(info, 'starting')
 
-  log.trace(this, 'started')
+    const db = createLevelDB(this.location, this.cacheSize)
+    const cache = new Manger(db, {
+      isEntry: (entry) => {
+        if (entry.enclosure) return true
+        log.trace(entry.url, 'invalid entry')
+      },
+      isFeed: (feed) => {
+        return true
+      }
+    })
+
+    this.errorHandler = errorHandler.bind(this)
+
+    cache.on('error', this.errorHandler)
+
+    this.hitHandler = hitHandler.bind(this)
+
+    cache.on('hit', this.hitHandler)
+
+    this.manger = cache
+
+    this.setRoutes()
+
+    const onrequest = (req, res) => {
+      log.info({ method: req.method, url: req.url }, 'request')
+
+      const terminate = (er, statusCode, payload, time) => {
+        if (er) {
+          const payloads = {
+            404: () => {
+              log.warn({ method: req.method, url: req.url }, 'no route')
+              const reason = req.url + ' is no route'
+              statusCode = 404
+              payload = JSON.stringify({
+                error: 'not found',
+                reason: reason
+              })
+            },
+            405: () => {
+              log.warn({ method: req.method, url: req.url }, 'not allowed')
+              const reason = req.method + ' ' + req.url + ' is undefined'
+              statusCode = 405
+              payload = JSON.stringify({
+                error: 'method not allowed',
+                reason: reason
+              })
+            }
+          }
+          if (er.statusCode in payloads) {
+            payloads[er.statusCode]()
+          } else if (ok(er)) {
+            if (!payload) {
+              return crash(er, log)
+            }
+            log.warn(er)
+          } else {
+            return crash(er, log)
+          }
+        }
+
+        respond(req, res, statusCode, payload, time, log)
+      }
+
+      this.handleRequest(req, res, terminate)
+    }
+
+    const server = http.createServer(onrequest)
+    const port = this.port
+
+    server.listen(port, (er) => {
+      log.info('listening: %s', port)
+      if (cb) cb(er)
+    })
+
+    server.on('clientError', (er, socket) => {
+      // Reverse proxy default health checking connects and disconnects every
+      // couple of seconds, producing a heartbeat here, hence the discreet logging.
+      socket.once('close', () => { log.trace('heartbeat') })
+      if (!socket.destroyed) {
+        socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
+      }
+    })
+
+    this.server = server
+
+    log.trace(this, 'started')
+  }
 }
+
+module.exports = exports = MangerService
