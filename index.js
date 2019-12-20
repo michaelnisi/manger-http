@@ -1,7 +1,7 @@
+'use strict'
+
 // manger-http - serve podcast feeds with persistent caching
 // @ts-check
-
-'use strict'
 
 const HttpHash = require('http-hash')
 const fs = require('fs')
