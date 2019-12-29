@@ -4,7 +4,7 @@
   "description": "HTTP/1.1 API for caching RSS feeds",
   "main": "index.js",
   "scripts": {
-    "test": "standard --fix",
+    "test": "eslint *.js **/*.js --fix",
     "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short"
   },
   "repository": {
@@ -33,10 +33,14 @@
     "readable-stream": "^3.4.0"
   },
   "devDependencies": {
-    "standard": "^11.0.1"
+    "@types/node": "^13.1.1",
+    "eslint": "^6.8.0",
+    "eslint-config-fbjs-opensource": "^2.0.1",
+    "eslint-plugin-import": "^2.19.1",
+    "prettier": "^1.19.1"
   },
   "engines": {
     "node": ">=10"
   },
-  "author": "Michael Nisi (http://troubled.pro/)"
+  "author": "Michael Nisi (https://troubled.pro/)"
 }

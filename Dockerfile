@@ -1,4 +1,4 @@
-FROM node:12.13.1-buster-slim
+FROM node:12.14.0-buster-slim
 
 ENV PORT 8080
 WORKDIR /usr/src/app
