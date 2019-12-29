@@ -112,8 +112,9 @@ class MangerService {
     }
 
     const route = this.hash.get(req.url);
+    const {handler} = route;
 
-    if (route.handler === null) {
+    if (!handler) {
       return cb(new MangerServiceError('not found', 404));
     }
 
@@ -125,7 +126,7 @@ class MangerService {
       this.version,
     );
 
-    return route.handler(req, res, opts, cb);
+    return handler(req, res, opts, cb);
   }
 
   setRoutes() {
@@ -233,7 +234,7 @@ class MangerService {
       }
     });
 
-    server.on('clientError', (er, socket) => {
+    server.on('clientError', (_er, socket) => {
       // Reverse proxy default health checking connects and disconnects every
       // couple of seconds, producing a heartbeat here, hence the discreet logging.
       socket.once('close', () => {
