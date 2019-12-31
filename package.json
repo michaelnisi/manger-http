@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "eslint *.js **/*.js --fix",
-    "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short",
-    "trace": "NODE_DEBUG=manger MANGER_LOG_LEVEL=10 node start.js | node_modules/bunyan/bin/bunyan -o short"
+    "start": "MANGER_LOG_LEVEL=info node start.js | pino-pretty",
+    "trace": "NODE_DEBUG=manger MANGER_LOG_LEVEL=trace node start.js | pino-pretty"
   },
   "repository": {
     "type": "git",
@@ -25,12 +25,12 @@
   "homepage": "https://github.com/michaelnisi/manger-http",
   "dependencies": {
     "binary-split": "^1.0.5",
-    "bunyan": "^1.8.12",
     "etag": "^1.8.1",
     "http-hash": "^2.0.0",
     "http-methods": "^1.0.0",
     "mkdirp": "^0.5.1",
     "negotiator": "^0.6.1",
+    "pino": "^5.15.0",
     "readable-stream": "^3.4.0"
   },
   "devDependencies": {
@@ -39,6 +39,7 @@
     "eslint": "^6.8.0",
     "eslint-config-fbjs-opensource": "^2.0.1",
     "eslint-plugin-import": "^2.19.1",
+    "pino-pretty": "^3.5.0",
     "prettier": "^1.19.1"
   },
   "engines": {
