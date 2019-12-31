@@ -106,16 +106,23 @@ class MangerService {
   /**
    * Handles request and response passing a callback into the route handler.
    */
-  handleRequest(req, res, cb) {
-    if (typeof cb !== 'function') {
-      throw new Error('callback required to handle request');
-    }
-
+  /**
+   *
+   * @param {*} req
+   * @param {*} res
+   * @param {(error: Error, statusCode: number, payload: Buffer, time: [number,number] ) => void} cb
+   */
+  handleRequest(req, res, cb = (error, statusCode, payload, time) => {}) {
     const route = this.hash.get(req.url);
     const {handler} = route;
 
     if (!handler) {
-      return cb(new MangerServiceError('not found', 404));
+      return cb(
+        new MangerServiceError('not found', 404),
+        404,
+        Buffer.from(''),
+        [0, 0],
+      );
     }
 
     const opts = new ReqOpts(
@@ -173,7 +180,7 @@ class MangerService {
     });
   }
 
-  start(cb) {
+  start(cb = error => {}) {
     const {log} = this;
 
     const info = {
@@ -186,16 +193,18 @@ class MangerService {
 
     const db = createLevelDB(this.location, this.cacheSize);
     const cache = new Manger(db, {
-      isEntry: entry => {
-        if (entry.enclosure) {
+      isEntry: e => {
+        if (e.enclosure) {
           return true;
         }
 
-        log.trace(entry.url, 'invalid entry');
+        log.trace(e.url, 'invalid entry');
 
         return false;
       },
-      isFeed: _feed => true,
+      isFeed: f => {
+        return typeof f.title === 'string';
+      },
     });
 
     this.errorHandler = errorHandler.bind(this);
@@ -211,9 +220,15 @@ class MangerService {
     this.setRoutes();
 
     const onrequest = (req, res) => {
-      log.info({method: req.method, url: req.url}, 'request');
+      const {url, method} = req;
+
+      log.info({method, url}, 'request');
 
       this.handleRequest(req, res, (error, statusCode, payload, time) => {
+        const {length} = payload;
+
+        log.trace({url, method, statusCode, error, length}, 'responding');
+
         if (error) {
           respondAfterError(error, {req, res, payload, time, log});
           return;
@@ -227,27 +242,23 @@ class MangerService {
     const {port} = this;
 
     server.listen(port, er => {
-      log.info('listening: %s', port);
+      log.info({port}, 'listening');
 
-      if (cb) {
-        cb(er);
-      }
+      cb(er);
     });
 
-    server.on('clientError', (_er, socket) => {
-      // Reverse proxy default health checking connects and disconnects every
-      // couple of seconds, producing a heartbeat here, hence the discreet logging.
+    server.on('clientError', (error, socket) => {
+      log.trace('client error', error);
       socket.once('close', () => {
-        log.trace('heartbeat');
+        log.trace('socket close');
       });
+
       if (!socket.destroyed) {
         socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
       }
     });
 
     this.server = server;
-
-    log.trace(this, 'started');
   }
 }
 

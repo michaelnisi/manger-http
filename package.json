@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "eslint *.js **/*.js --fix",
-    "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short"
+    "start": "MANGER_LOG_LEVEL=30 node start.js | node_modules/bunyan/bin/bunyan -o short",
+    "trace": "NODE_DEBUG=manger MANGER_LOG_LEVEL=10 node start.js | node_modules/bunyan/bin/bunyan -o short"
   },
   "repository": {
     "type": "git",
