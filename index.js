@@ -140,8 +140,12 @@ class MangerService {
     const {hash} = this;
 
     function set(name, handler) {
-      assert(typeof handler === 'object');
-      hash.set(name, httpMethods(handler));
+      if (typeof handler === 'object') {
+        hash.set(name, httpMethods(handler));
+        return;
+      }
+
+      hash.set(name, handler);
     }
 
     set('/', {
@@ -225,10 +229,6 @@ class MangerService {
       log.info({method, url}, 'request');
 
       this.handleRequest(req, res, (error, statusCode, payload, time) => {
-        const {length} = payload;
-
-        log.trace({url, method, statusCode, error, length}, 'responding');
-
         if (error) {
           respondAfterError(error, {req, res, payload, time, log});
           return;
