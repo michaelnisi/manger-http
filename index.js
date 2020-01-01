@@ -16,7 +16,6 @@ const {
   MangerServiceError,
 } = require('./lib/meta');
 const {respond, respondAfterError} = require('./lib/respond');
-const assert = require('assert');
 
 const {
   deleteFeed,
@@ -149,8 +148,8 @@ class MangerService {
     }
 
     set('/', {
-      GET: root,
       HEAD: root,
+      GET: root,
     });
 
     set('/entries', {
@@ -229,12 +228,14 @@ class MangerService {
       log.info({method, url}, 'request');
 
       this.handleRequest(req, res, (error, statusCode, payload, time) => {
+        const body = method === 'HEAD' ? Buffer.from('') : payload;
+
         if (error) {
-          respondAfterError(error, {req, res, payload, time, log});
+          respondAfterError(error, {req, res, body, time, log});
           return;
         }
 
-        respond(req, res, statusCode, payload, time, log);
+        respond(req, res, statusCode, body, time, log);
       });
     };
 
