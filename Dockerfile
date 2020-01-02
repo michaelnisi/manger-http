@@ -8,4 +8,4 @@ COPY . .
 
 EXPOSE 8080
 USER node
-CMD [ "node", "--abort-on-uncaught-exception", "start.js" ]
+CMD [ "node", "start.js" ]

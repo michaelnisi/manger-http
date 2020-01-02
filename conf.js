@@ -22,7 +22,12 @@ function maxUpdates() {
 }
 
 function createLogger() {
-  const level = MANGER_LOG_LEVEL || 'error';
+  const level = MANGER_LOG_LEVEL;
+
+  if (!level) {
+    return null;
+  }
+
   const dest = pino.extreme();
 
   return pino({level, dest});
