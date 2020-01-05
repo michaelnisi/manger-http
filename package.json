@@ -44,7 +44,7 @@
     "prettier": "^1.19.1"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=12"
   },
   "author": "Michael Nisi (https://troubled.pro/)"
 }
