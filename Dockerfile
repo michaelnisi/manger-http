@@ -1,4 +1,4 @@
-FROM node:8.16.2-jessie
+FROM node:12.14.0-buster-slim
 
 ENV PORT 8080
 WORKDIR /usr/src/app
@@ -8,4 +8,4 @@ COPY . .
 
 EXPOSE 8080
 USER node
-CMD [ "node", "--abort-on-uncaught-exception", "start.js" ]
+CMD [ "node", "start.js" ]

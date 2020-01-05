@@ -1,20 +1,21 @@
-'use strict'
-
 // manger-http - serve podcast feeds with persistent caching
+// @ts-check
 
-module.exports = exports = MangerService
-
-const HttpHash = require('http-hash')
-const fs = require('fs')
-const http = require('http')
-const httpMethods = require('http-methods/method')
-const manger = require('manger')
-const mkdirp = require('mkdirp')
-const path = require('path')
-const update = require('./lib/update')
-const url = require('url')
-const { crash, ok, createLogger } = require('./lib/meta')
-const { respond } = require('./lib/respond')
+const HttpHash = require('http-hash');
+const fs = require('fs');
+const http = require('http');
+const httpMethods = require('http-methods/method');
+const {Manger, createLevelDB} = require('manger');
+const mkdirp = require('mkdirp');
+const path = require('path');
+const update = require('./lib/update');
+const {
+  crash,
+  createServiceError,
+  createLogger,
+  MangerServiceError,
+} = require('./lib/meta');
+const {respond, respondAfterError} = require('./lib/respond');
 
 const {
   deleteFeed,
@@ -26,241 +27,240 @@ const {
   list,
   ranks,
   resetRanks,
-  root
-} = require('./lib/routes')
+  root,
+} = require('./lib/routes');
 
-// Returns the version of the containing package.
-function version () {
-  const p = path.join(__dirname, 'package.json')
-  const data = fs.readFileSync(p)
-  const pkg = JSON.parse(data)
+/**
+ * Returns the package manifest object.
+ */
+function readPackage() {
+  const p = path.join(__dirname, 'package.json');
+  const data = fs.readFileSync(p);
 
-  return pkg.version
+  return JSON.parse(data.toString());
 }
 
-// Returns options completed with defaults.
-function defaults (opts) {
-  opts = opts || Object.create(null)
-  opts.location = opts.location || '/tmp/manger-http'
-  opts.port = opts.port || 8384
-  opts.log = createLogger(opts.log)
-  opts.cacheSize = opts.cacheSize || 16 * 1024 * 1024
-
-  return opts
+/**
+ * Additional request state.
+ *
+ * @param {*} log
+ * @param {*} manger
+ * @param {*} params
+ * @param {*} splat
+ * @param {*} version
+ */
+function ReqOpts(log, manger, params, splat, version) {
+  this.log = log;
+  this.manger = manger;
+  this.params = params;
+  this.splat = splat;
+  this.version = version;
 }
 
-// Creates a new manger service with options.
-function MangerService (opts) {
-  if (!(this instanceof MangerService)) return new MangerService(opts)
-
-  opts = defaults(opts)
-  Object.assign(this, opts)
-
-  this.hash = HttpHash()
-  this.version = version()
-
-  this.manger = null
-  this.server = null
-
-  mkdirp.sync(this.location)
+/**
+ * Debug logs cache hits.
+ *
+ * @param {*} qry
+ */
+function hitHandler(qry) {
+  this.log.debug(qry, 'hit');
 }
 
-// Additional request state.
-function ReqOpts (log, manger, params, splat, version) {
-  this.log = log
-  this.manger = manger
-  this.params = params
-  this.splat = splat
-  this.version = version
-}
+/**
+ * @param {Error} error
+ */
+function errorHandler(error) {
+  const er = createServiceError(error);
+  const {statusCode} = er;
 
-// Handles request and response passing a callback into the route handler.
-MangerService.prototype.handleRequest = function (req, res, cb) {
-  if (typeof cb !== 'function') {
-    throw new Error('callback required to handle request')
+  if (statusCode !== 500) {
+    this.log.warn(er.message);
+
+    return;
   }
 
-  const pathname = url.parse(req.url).pathname
+  crash(er, this.log);
+}
 
-  const route = this.hash.get(pathname)
+class MangerService {
+  /**
+   * Creates a new Manger Service.
+   *
+   * @param {{location: string, port: number, log: any, cacheSize: number}} props
+   */
+  constructor({location, port, log, cacheSize}) {
+    this.location = location || '/tmp/manger-http';
+    this.port = port || 8384;
+    this.log = createLogger(log);
+    this.cacheSize = cacheSize || 16 * 1024 * 1024;
+    this.hash = HttpHash();
+    const {version} = readPackage();
+    this.version = version;
+    this.manger = null;
+    this.server = null;
 
-  if (route.handler === null) {
-    const er = new Error('not found')
-    er.statusCode = 404
-
-    return cb ? cb(er) : null
+    mkdirp.sync(this.location);
   }
 
-  const opts = new ReqOpts(
-    this.log,
-    this.manger,
-    route.params,
-    route.splat,
-    this.version
-  )
+  /**
+   * Handles request and response passing a callback into the route handler.
+   */
+  /**
+   *
+   * @param {*} req
+   * @param {*} res
+   * @param {(error: Error, statusCode: number, payload: Buffer, time: [number,number] ) => void} cb
+   */
+  handleRequest(req, res, cb = (error, statusCode, payload, time) => {}) {
+    const route = this.hash.get(req.url);
+    const {handler} = route;
 
-  return route.handler(req, res, opts, cb)
-}
-
-// Debug logs cache hits.
-function hitHandler (qry) {
-  this.log.debug(qry, 'hit')
-}
-
-function errorHandler (er) {
-  if (ok(er)) {
-    this.log.warn(er.message)
-  } else {
-    const failure = 'fatal error'
-    const reason = er.message
-    const error = new Error(`${failure}: ${reason}`)
-
-    crash(error, this.log)
-  }
-}
-
-MangerService.prototype.setRoutes = function () {
-  const hash = this.hash
-
-  function set (name, handler) {
-    if (handler && typeof handler === 'object') {
-      handler = httpMethods(handler)
+    if (!handler) {
+      return cb(
+        new MangerServiceError('not found', 404),
+        404,
+        Buffer.from(''),
+        [0, 0],
+      );
     }
 
-    hash.set(name, handler)
+    const opts = new ReqOpts(
+      this.log,
+      this.manger,
+      route.params,
+      route.splat,
+      this.version,
+    );
+
+    return handler(req, res, opts, cb);
   }
 
-  set('/', {
-    GET: root,
-    HEAD: root
-  })
+  setRoutes() {
+    const {hash} = this;
 
-  set('/entries', {
-    HEAD: entries,
-    POST: entries
-  })
-
-  set('/entries/:url', {
-    GET: entriesOfFeed,
-    HEAD: entriesOfFeed
-  })
-
-  set('/feeds', {
-    GET: list,
-    HEAD: list,
-    POST: feeds,
-    PUT: update.bind(this)
-  })
-
-  set('/feed/:url', {
-    DELETE: deleteFeed,
-    GET: feed,
-    HEAD: feed
-  })
-
-  set('/ranks', {
-    DELETE: resetRanks,
-    GET: ranks,
-    HEAD: ranks,
-    PUT: flushCounter
-  })
-}
-
-MangerService.prototype.start = function (cb) {
-  const log = this.log
-
-  const info = {
-    version: this.version,
-    location: this.location,
-    cacheSize: this.cacheSize
-  }
-
-  log.info(info, 'start')
-
-  const cache = manger(this.location, {
-    cacheSize: this.cacheSize,
-    isEntry: (entry) => {
-      if (entry.enclosure) return true
-      log.trace(entry.url, 'invalid entry')
-    },
-    isFeed: (feed) => {
-      return true
-    }
-  })
-
-  this.errorHandler = errorHandler.bind(this)
-
-  cache.on('error', this.errorHandler)
-
-  this.hitHandler = hitHandler.bind(this)
-
-  cache.on('hit', this.hitHandler)
-
-  this.manger = cache
-
-  this.setRoutes()
-
-  const onrequest = (req, res) => {
-    log.info({ method: req.method, url: req.url }, 'request')
-
-    const terminate = (er, statusCode, payload, time) => {
-      if (er) {
-        const payloads = {
-          404: () => {
-            log.warn({ method: req.method, url: req.url }, 'no route')
-            const reason = req.url + ' is no route'
-            statusCode = 404
-            payload = JSON.stringify({
-              error: 'not found',
-              reason: reason
-            })
-          },
-          405: () => {
-            log.warn({ method: req.method, url: req.url }, 'not allowed')
-            const reason = req.method + ' ' + req.url + ' is undefined'
-            statusCode = 405
-            payload = JSON.stringify({
-              error: 'method not allowed',
-              reason: reason
-            })
-          }
-        }
-        if (er.statusCode in payloads) {
-          payloads[er.statusCode]()
-        } else if (ok(er)) {
-          if (!payload) {
-            return crash(er, log)
-          }
-          log.warn(er)
-        } else {
-          return crash(er, log)
-        }
+    function set(name, handler) {
+      if (typeof handler === 'object') {
+        hash.set(name, httpMethods(handler));
+        return;
       }
 
-      respond(req, res, statusCode, payload, time, log)
+      hash.set(name, handler);
     }
 
-    this.handleRequest(req, res, terminate)
+    set('/', {
+      HEAD: root,
+      GET: root,
+    });
+
+    set('/entries', {
+      HEAD: entries,
+      POST: entries,
+    });
+
+    set('/entries/:url', {
+      GET: entriesOfFeed,
+      HEAD: entriesOfFeed,
+    });
+
+    set('/feeds', {
+      GET: list,
+      HEAD: list,
+      POST: feeds,
+      PUT: update.bind(this),
+    });
+
+    set('/feed/:url', {
+      DELETE: deleteFeed,
+      GET: feed,
+      HEAD: feed,
+    });
+
+    set('/ranks', {
+      DELETE: resetRanks,
+      GET: ranks,
+      HEAD: ranks,
+      PUT: flushCounter,
+    });
   }
 
-  const server = http.createServer(onrequest)
-  const port = this.port
+  start(cb = error => {}) {
+    const {log} = this;
 
-  server.listen(port, (er) => {
-    log.info('listening: %s', port)
-    if (cb) cb(er)
-  })
+    const info = {
+      version: this.version,
+      location: this.location,
+      cacheSize: this.cacheSize,
+    };
 
-  server.on('clientError', (er, socket) => {
-    // Reverse proxy default health checking connects and disconnects every
-    // couple of seconds, producing a heartbeat here, hence the discreet logging.
-    socket.once('close', () => { log.trace('heartbeat') })
-    if (!socket.destroyed) {
-      socket.end('HTTP/1.1 400 Bad Request\r\n\r\n')
-    }
-  })
+    log.info(info, 'starting');
 
-  this.server = server
+    const db = createLevelDB(this.location, this.cacheSize);
+    const cache = new Manger(db, {
+      isEntry: e => {
+        if (e.enclosure) {
+          return true;
+        }
 
-  log.trace(this, 'started')
+        log.trace(e.url, 'invalid entry');
+
+        return false;
+      },
+      isFeed: f => {
+        return typeof f.title === 'string';
+      },
+    });
+
+    this.errorHandler = errorHandler.bind(this);
+
+    cache.on('error', this.errorHandler);
+
+    this.hitHandler = hitHandler.bind(this);
+
+    cache.on('hit', this.hitHandler);
+
+    this.manger = cache;
+
+    this.setRoutes();
+
+    const onrequest = (req, res) => {
+      const {url, method} = req;
+
+      log.info({method, url}, 'request');
+
+      this.handleRequest(req, res, (error, statusCode, payload, time) => {
+        const body = method === 'HEAD' ? Buffer.from('') : payload;
+
+        if (error) {
+          respondAfterError(error, {req, res, body, time, log});
+          return;
+        }
+
+        respond(req, res, statusCode, body, time, log);
+      });
+    };
+
+    const server = http.createServer(onrequest);
+    const {port} = this;
+
+    server.listen(port, er => {
+      log.info({port}, 'listening');
+
+      cb(er);
+    });
+
+    server.on('clientError', (error, socket) => {
+      log.trace('client error', error);
+      socket.once('close', () => {
+        log.trace('socket close');
+      });
+
+      if (!socket.destroyed) {
+        socket.end('HTTP/1.1 400 Bad Request\r\n\r\n');
+      }
+    });
+
+    this.server = server;
+  }
 }
+
+module.exports = exports = MangerService;

@@ -136,6 +136,7 @@ The response is an `Array()` containing the requested `feed()` or an empty `Arra
 ```
 DELETE /feed/:uri
 ```
+
 - `:uri` The url-encoded URL of the feed
 
 The response is a confirmation:

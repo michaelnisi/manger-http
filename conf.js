@@ -1,42 +1,45 @@
-'use strict'
-
 // config - configure manger-http
 
-const bunyan = require('bunyan')
+const pino = require('pino');
 
 // Working around https://github.com/nodejs/node/issues/16196
-require('tls').DEFAULT_ECDH_CURVE = 'auto'
+require('tls').DEFAULT_ECDH_CURVE = 'auto';
 
-function level (l) {
-  return [10, 20, 30, 40, 50, 60].includes(l) ? l : null
+const {
+  MANGER_MAX_UPDATES,
+  MANGER_LOG_LEVEL,
+  LEVEL_DB_CACHE_SIZE,
+  LEVEL_DB_LOCATION,
+  PORT,
+} = process.env;
+
+const MAX_UPDATES = 8.64e7;
+
+function maxUpdates() {
+  const max = parseInt(MANGER_MAX_UPDATES, 10);
+
+  return isNaN(max) ? MAX_UPDATES : max;
 }
 
-function log () {
-  const l = level(parseInt(process.env.MANGER_LOG_LEVEL, 10))
+function createLogger() {
+  const level = MANGER_LOG_LEVEL;
 
-  if (!l) return null
+  if (!level) {
+    return null;
+  }
 
-  return bunyan.createLogger({
-    name: 'manger',
-    level: l,
-    serializers: bunyan.stdSerializers
-  })
+  const dest = pino.extreme();
+
+  return pino({level, dest});
 }
 
-const MAX_UPDATES = 8.64e7
-
-function maxUpdates () {
-  const max = parseInt(process.env.MANGER_MAX_UPDATES, 10)
-
-  return isNaN(max) ? MAX_UPDATES : max
-}
-
-exports.cacheSize = process.env.LEVEL_DB_CACHE_SIZE
-exports.location = process.env.LEVEL_DB_LOCATION
-exports.log = log()
-exports.maxUpdates = maxUpdates()
-exports.port = process.env.PORT
+exports.cacheSize = Number(LEVEL_DB_CACHE_SIZE);
+exports.location = LEVEL_DB_LOCATION;
+exports.log = createLogger();
+exports.maxUpdates = maxUpdates();
+exports.port = parseInt(PORT, 10);
 
 if (module === require.main) {
-  console.log(exports)
+  // eslint-disable-next-line no-console
+  console.log(exports);
 }

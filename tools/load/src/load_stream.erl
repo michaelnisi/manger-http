@@ -13,23 +13,33 @@ queries(N, Queries) ->
   Query = #{<<"url">> => URL},
   queries(N-1, [Query|Queries]).
 
-uri_encoded_rand() ->
+uri_encoded_rand(1) ->
+  "";
+uri_encoded_rand(2) ->
   http_uri:encode(load_feeds:rand()).
+
+%% Returns a random feed URL including an empty string.
+uri_encoded_rand() ->
+  uri_encoded_rand(rand:uniform(2)).
 
 get_or_head(C, P, 1) ->
   gun:head(C, P);
 get_or_head(C, P, _) ->
   gun:get(C, P).
 
+%% Issues GET or HEAD request.
+get_or_head(C, P) ->
+  get_or_head(C, P, rand:uniform(2)).
+
 stream(root, C) ->
   P = "/",
-  get_or_head(C, P, rand:uniform(2));
+  get_or_head(C, P);
 stream(cached_feeds, C) ->
   P = "/feeds",
-  get_or_head(C, P, rand:uniform(2));
+  get_or_head(C, P);
 stream(ranks, C) ->
   P = "/ranks",
-  get_or_head(C, P, rand:uniform(2));
+  get_or_head(C, P);
 stream(entries, C) ->
   N = rand:uniform(10),
   Body = queries(N),
@@ -44,10 +54,10 @@ stream(feeds, C) ->
   ], Body);
 stream(feed, C) ->
   P = "/feed/" ++ uri_encoded_rand(),
-  get_or_head(C, P, rand:uniform(2));
+  get_or_head(C, P);
 stream(entries_of_feed, C) ->
   P = "/entries/" ++ uri_encoded_rand(),
-  get_or_head(C, P, rand:uniform(2));
+  get_or_head(C, P);
 stream(delete, C) ->
   P = "/feed/" ++ uri_encoded_rand(),
   gun:delete(C, P);
