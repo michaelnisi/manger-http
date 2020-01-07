@@ -104,8 +104,6 @@ class MangerService {
 
   /**
    * Handles request and response passing a callback into the route handler.
-   */
-  /**
    *
    * @param {*} req
    * @param {*} res
@@ -244,7 +242,6 @@ class MangerService {
 
     server.listen(port, er => {
       log.info({port}, 'listening');
-
       cb(er);
     });
 
